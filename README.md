@@ -1,36 +1,146 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SlugFound
 
-## Getting Started
+A lost-and-found platform for UC Santa Cruz students. Post lost items, browse found ones, and message other students directly — all in one place.
 
-First, run the development server:
+Built with Next.js 16, React 19, Tailwind CSS v4, and JWT-based sessions.
+
+---
+
+## Prerequisites
+
+- **Node.js 18+** (check with `node -v`)
+- **npm** (comes with Node — `npm -v` to verify)
+
+---
+
+## Getting started
+
+### 1. Clone and install
+
+```bash
+git clone <repo-url>
+cd SlugFound
+npm install
+```
+
+### 2. Set up environment variables
+
+Create a `.env.local` file in the project root:
+
+```bash
+cp .env.local.example .env.local   # if an example file exists
+# — or create it manually:
+touch .env.local
+```
+
+Open `.env.local` and add:
+
+```env
+SESSION_SECRET=your-secret-key-here
+```
+
+**For local development** any string works — for example:
+
+```env
+SESSION_SECRET=slugfound-local-dev-secret-change-in-production
+```
+
+> ⚠️ **Never commit `.env.local` to git.** It's already listed in `.gitignore`.  
+> For production, generate a strong random secret: `openssl rand -hex 32`
+
+### 3. Start the dev server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment variables
 
-## Learn More
+| Variable | Required | Description |
+|---|---|---|
+| `SESSION_SECRET` | **Yes** | Secret key used to sign and verify JWT session tokens. Must be the same value across restarts — changing it invalidates all active sessions. |
 
-To learn more about Next.js, take a look at the following resources:
+That's the only variable the app needs right now. As the backend grows (database, email, storage) more will be added here.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Demo credentials
 
-## Deploy on Vercel
+The app ships with a hardcoded demo account for local development:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Field | Value |
+|---|---|
+| Email | `demo@example.com` |
+| Password | `Password1!` |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+> This is defined in `app/actions/auth.ts` → `getUserByEmail`. Replace it when you wire up a real database.
+
+---
+
+## Available scripts
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Start Next.js dev server with hot reload |
+| `npm run build` | Production build (outputs to `.next/`) |
+| `npm run start` | Serve the production build locally |
+| `npm run lint` | Run ESLint across the project |
+
+---
+
+## Project structure
+
+```
+app/
+  (public)/          # Unauthenticated pages — landing, login, signup
+  (app)/             # Authenticated pages — lost, found, messages, create, profile
+  actions/           # Next.js Server Actions (auth)
+  components/        # Shared UI components
+    messages/        # All messaging UI sub-components
+    ui/              # Primitive components (Badge)
+  lib/               # Utilities, types, mock data, session helpers
+proxy.ts             # Route-guard middleware — ⚠️ see DOCS.md before touching
+```
+
+See [`DOCS.md`](./DOCS.md) for a full contributor guide and architecture walkthrough.  
+See [`CODETOUR.md`](./CODETOUR.md) for a guided narrative tour of the codebase.
+
+---
+
+## Current state
+
+The app is **frontend-only**. There is no database — all item listings and messages are hardcoded mock arrays in `app/lib/`. Authentication works (JWT sessions via `jose`), but the user lookup is a stub.
+
+See the [Known gaps](./DOCS.md#known-gaps) section in DOCS.md for what's next.
+
+---
+
+## Tech stack
+
+| Technology | Version | Role |
+|---|---|---|
+| Next.js | 16.2.3 | Framework (App Router) |
+| React | 19.2.4 | UI |
+| Tailwind CSS | v4 | Styling |
+| `jose` | 6.x | JWT signing / verification |
+| `bcryptjs` | 3.x | Password hashing |
+| `zod` | 4.x | Form validation |
+| TypeScript | 5.x | Type safety |
+
+---
+
+## Contributing
+
+Before making any changes, please read our [Contributing Guide](CONTRIBUTING.md) for the team workflow, coding standards, and documentation requirements.
+
+**Quick checklist:**
+- Run `/plan` before starting any feature
+- Run `/code-review` after writing code
+- Update relevant docs (DOCS.md, CODETOUR.md, README.md) based on what changed
+- Run `/refactor-clean` before opening a PR
+
+For the full workflow see [CONTRIBUTING.md](CONTRIBUTING.md).

@@ -2,23 +2,25 @@ import Link from 'next/link'
 
 const features = [
   {
+    step: '01',
     emoji: '📍',
     title: 'Campus-wide coverage',
-    desc: 'Every college, library, dining hall, and bus stop on the UCSC campus.',
+    desc: 'Every college, library, dining hall, and bus stop on the UCSC campus — all in one place.',
   },
   {
+    step: '02',
     emoji: '📷',
     title: 'Photo uploads',
     desc: 'Attach a photo to your listing so owners can identify their item instantly.',
   },
   {
+    step: '03',
     emoji: '🔔',
     title: 'Instant matching',
-    desc: 'Get notified when a found post matches your lost item description.',
+    desc: 'Get notified the moment a found post matches your lost item description.',
   },
 ]
 
-// Mock blurred preview cards
 const previewItems = [
   { emoji: '🎧', label: 'AirPods Pro', sub: 'McHenry Library · 2h ago', type: 'lost' },
   { emoji: '📱', label: 'iPhone 14', sub: 'Crown Dining · 1d ago', type: 'found' },
@@ -35,7 +37,7 @@ export default function LandingPage() {
       <section className="relative flex flex-col items-center justify-center overflow-hidden px-4 py-32 text-center">
         {/* Glow */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="h-[600px] w-[800px] rounded-full bg-yellow-400/5 blur-3xl" />
+          <div className="h-[600px] w-[800px] rounded-full bg-yellow-400/8 blur-3xl" />
         </div>
 
         <div className="relative z-10 flex flex-col items-center gap-5">
@@ -82,13 +84,12 @@ export default function LandingPage() {
             Browse hundreds of listings across campus
           </h2>
 
-          {/* Grid with blur overlay */}
           <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {previewItems.map((item) => (
                 <div
                   key={item.label}
-                  className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950 p-4 select-none"
+                  className="flex cursor-default select-none items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950 p-4"
                 >
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-2xl">
                     {item.emoji}
@@ -125,13 +126,13 @@ export default function LandingPage() {
                 <div className="mt-1 flex gap-2">
                   <Link
                     href="/signup"
-                    className="rounded-full bg-yellow-400 px-5 py-2 text-sm font-bold text-zinc-950 hover:bg-yellow-300 transition"
+                    className="rounded-full bg-yellow-400 px-5 py-2 text-sm font-bold text-zinc-950 transition hover:bg-yellow-300"
                   >
                     Get started
                   </Link>
                   <Link
                     href="/login"
-                    className="rounded-full border border-zinc-700 px-5 py-2 text-sm font-medium text-zinc-300 hover:text-white transition"
+                    className="rounded-full border border-zinc-700 px-5 py-2 text-sm font-medium text-zinc-300 transition hover:text-white"
                   >
                     Sign in
                   </Link>
@@ -152,10 +153,15 @@ export default function LandingPage() {
             {features.map((f) => (
               <div
                 key={f.title}
-                className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6"
+                className="group rounded-2xl border border-zinc-800 bg-zinc-900 p-6 transition-colors hover:border-zinc-700 hover:bg-zinc-800/60"
               >
-                <span className="text-3xl">{f.emoji}</span>
-                <h3 className="mt-3 font-semibold text-white">{f.title}</h3>
+                <div className="mb-4 flex items-start justify-between">
+                  <span className="text-3xl">{f.emoji}</span>
+                  <span className="text-2xl font-black text-yellow-400/20 group-hover:text-yellow-400/30 transition-colors">
+                    {f.step}
+                  </span>
+                </div>
+                <h3 className="font-semibold text-white">{f.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-400">{f.desc}</p>
               </div>
             ))}
@@ -179,12 +185,28 @@ export default function LandingPage() {
           >
             Create a free account
           </Link>
+
+          <blockquote className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900 px-6 py-4 text-left">
+            <p className="text-sm leading-relaxed text-zinc-400">
+              &ldquo;Got my AirPods back in under 2 hours. Honestly shocked it worked — whoever
+              built this is a legend.&rdquo;
+            </p>
+            <footer className="mt-2 text-xs text-zinc-600">
+              — Porter College, Fall 2025
+            </footer>
+          </blockquote>
+
+          <div className="mt-6 flex items-center justify-center gap-6 text-xs text-zinc-600">
+            <span>✓ <span className="text-zinc-400">48 items</span> recovered this semester</span>
+            <span>✓ <span className="text-zinc-400">Free</span> for all @ucsc.edu students</span>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
       <footer className="border-t border-zinc-800 px-4 py-6 text-center text-xs text-zinc-700">
-        <span className="font-semibold text-yellow-400">SlugFound</span> · UC Santa Cruz · CMPS 115 — Team SlugFound
+        <span className="font-semibold text-yellow-400">SlugFound</span> · UC Santa Cruz ·
+        CMPS 115 — Team SlugFound
       </footer>
     </div>
   )

@@ -3,16 +3,19 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { logout } from '@/app/actions/auth'
+import { useUnread } from '@/app/lib/unread-context'
 
 const navItems = [
   { href: '/lost', label: 'Lost Items', icon: '🔍' },
   { href: '/found', label: 'Found Items', icon: '📦' },
+  { href: '/messages', label: 'Messages', icon: '💬' },
   { href: '/create', label: 'Report Item', icon: '+', highlight: true },
   { href: '/profile', label: 'Profile', icon: '👤' },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const { totalUnread } = useUnread()
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
   return (
@@ -40,28 +43,38 @@ export default function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="mt-1 flex items-center gap-3 rounded-xl bg-yellow-400 px-3 py-2.5 text-sm font-bold text-zinc-950 transition hover:bg-yellow-300"
+                  className="mt-4 flex items-center gap-3 rounded-xl bg-yellow-400 px-3 py-2.5 text-sm font-bold text-zinc-950 transition hover:bg-yellow-300"
                 >
                   <span className="text-base font-black leading-none">{item.icon}</span>
                   {item.label}
                 </Link>
               )
             }
+
+            const active = isActive(item.href)
+            const isMessages = item.href === '/messages'
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                  isActive(item.href)
+                  active
                     ? 'bg-zinc-800 text-white'
                     : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
                 }`}
               >
                 <span className="text-base">{item.icon}</span>
                 {item.label}
-                {isActive(item.href) && (
-                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-yellow-400" />
-                )}
+                <span className="ml-auto flex items-center">
+                  {isMessages && totalUnread > 0 ? (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-yellow-400 px-1 text-[10px] font-bold text-zinc-950">
+                      {totalUnread}
+                    </span>
+                  ) : active ? (
+                    <span className="h-1.5 w-1.5 rounded-full bg-yellow-400" />
+                  ) : null}
+                </span>
               </Link>
             )
           })}
@@ -98,16 +111,26 @@ export default function Sidebar() {
               </Link>
             )
           }
+
+          const active = isActive(item.href)
+          const isMessages = item.href === '/messages'
+
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-1 flex-col items-center justify-center gap-1 py-3 transition-colors ${
-                isActive(item.href) ? 'text-yellow-400' : 'text-zinc-500'
+              className={`relative flex flex-1 flex-col items-center justify-center gap-1 py-3 transition-colors ${
+                active ? 'text-yellow-400' : 'text-zinc-500'
               }`}
             >
               <span className="text-xl">{item.icon}</span>
               <span className="text-[10px] font-medium">{item.label.split(' ')[0]}</span>
+              {/* Unread dot on mobile */}
+              {isMessages && totalUnread > 0 && (
+                <span className="absolute right-[calc(50%-14px)] top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-yellow-400 px-1 text-[9px] font-bold text-zinc-950">
+                  {totalUnread}
+                </span>
+              )}
             </Link>
           )
         })}

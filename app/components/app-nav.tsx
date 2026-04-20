@@ -1,3 +1,8 @@
+// ⚠️ DEAD CODE — This component is not imported anywhere in the app.
+// The authenticated layout uses <Sidebar> instead, and the public layout has
+// its own inline header in app/(public)/layout.tsx.
+// Safe to delete unless you plan to use it for a different layout.
+
 'use client'
 
 import Link from 'next/link'

@@ -6,8 +6,15 @@ import { LoginFormSchema, FormState } from '@/app/lib/definitions'
 import { createSession, deleteSession } from '@/app/lib/session'
 
 // ---------------------------------------------------------------------------
-// Replace this stub with a real database lookup.
-// e.g. const user = await db.query.users.findFirst({ where: eq(users.email, email) })
+// ⚠️  STUB — Replace with a real database lookup before going to production.
+//
+// Example with Drizzle + Postgres:
+//   return db.query.users.findFirst({ where: eq(users.email, email) })
+//
+// Performance note: The current implementation calls bcrypt.hash() on every
+// invocation, even for emails that don't exist. bcrypt is intentionally slow
+// (cost factor 10 ≈ 100ms). In production, store the hash once at registration
+// and never re-hash at login time.
 // ---------------------------------------------------------------------------
 async function getUserByEmail(email: string) {
   // Demo credentials: demo@example.com / Password1!

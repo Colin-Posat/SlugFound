@@ -1,3 +1,12 @@
+// ⚠️ The form below has no server action — submitting it does nothing.
+// To implement signup:
+//   1. Create a `signup` server action in app/actions/auth.ts
+//   2. Add Zod validation (name, email, password, confirm)
+//   3. Hash the password with bcrypt and write the user to the database
+//   4. Call createSession(userId) and redirect('/lost')
+//   5. Wire the action: convert this to a client component and use useActionState,
+//      or pass the action directly to the <form action={signup}> element.
+
 import Link from 'next/link'
 
 export default function SignupPage() {

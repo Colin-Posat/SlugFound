@@ -19,3 +19,47 @@ export type SessionPayload = {
   userId: string
   expiresAt: Date
 }
+
+// ── Messaging ──────────────────────────────────────────────
+
+export type MessageUser = {
+  id: string
+  name: string
+  initial: string
+  college?: string
+}
+
+export type ChatMessage = {
+  id: string
+  conversationId: string
+  senderId: string
+  body: string
+  sentAt: string
+}
+
+export type Conversation = {
+  id: string
+  otherUser: MessageUser
+  itemId: string
+  itemTitle: string
+  itemEmoji: string
+  itemType: 'lost' | 'found'
+  lastMessagePreview: string
+  lastMessageAt: string
+  unreadCount: number
+}
+
+export const CURRENT_USER_ID = 'me'
+
+// ── Item listings ──────────────────────────────────────────
+
+export type Item = {
+  id: string
+  type: 'lost' | 'found'
+  title: string
+  category: string
+  location: string
+  time: string
+  description: string
+  emoji: string
+}
