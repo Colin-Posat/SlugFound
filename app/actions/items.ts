@@ -13,35 +13,13 @@
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { z } from 'zod'
 import { createSupabaseServerClient } from '@/app/lib/supabase/server'
-import { ITEM_CATEGORIES, UCSC_LOCATIONS } from '@/app/lib/definitions'
+import { CreateItemSchema, type CreateItemFormState } from '@/app/lib/item-schemas'
 
-// ─── Validation ────────────────────────────────────────────────────────────
+// ─── Constants ─────────────────────────────────────────────────────────────
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024 // 5 MB
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp']
-
-const CreateItemSchema = z.object({
-  type: z.enum(['lost', 'found']),
-  title: z.string().trim().min(1, 'Title is required.').max(120),
-  description: z.string().trim().min(1, 'Description is required.').max(1000),
-  category: z.enum(ITEM_CATEGORIES, { message: 'Pick a category.' }),
-  location: z.string().trim().min(1, 'Location is required.'),
-})
-
-export type CreateItemFormState =
-  | {
-      errors?: {
-        title?: string[]
-        description?: string[]
-        category?: string[]
-        location?: string[]
-        photo?: string[]
-      }
-      message?: string
-    }
-  | undefined
 
 // ─── Action ────────────────────────────────────────────────────────────────
 
@@ -125,6 +103,3 @@ export async function createItem(
   redirect(validated.data.type === 'lost' ? '/lost' : '/found')
 }
 
-// Suppress unused-warning hint for ITEM_CATEGORIES + UCSC_LOCATIONS imports
-// (kept here for future schema-aware error messages)
-void UCSC_LOCATIONS

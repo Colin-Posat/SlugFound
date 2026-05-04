@@ -9,7 +9,8 @@
 
 import { useActionState } from 'react'
 import Link from 'next/link'
-import { login, type AuthFormState } from '@/app/actions/auth'
+import { login } from '@/app/actions/auth'
+import type { AuthFormState } from '@/app/lib/auth-schemas'
 
 const INPUT_CLS =
   'rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none transition focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400'

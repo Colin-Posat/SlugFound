@@ -12,7 +12,8 @@
 
 import { useActionState, useState } from 'react'
 import Link from 'next/link'
-import { signup, type AuthFormState } from '@/app/actions/auth'
+import { signup } from '@/app/actions/auth'
+import type { AuthFormState } from '@/app/lib/auth-schemas'
 
 // ─── Password strength helpers ─────────────────────────────────────────────
 

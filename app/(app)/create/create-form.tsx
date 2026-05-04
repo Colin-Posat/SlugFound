@@ -3,7 +3,8 @@
 import { useActionState, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { createItem, type CreateItemFormState } from '@/app/actions/items'
+import { createItem } from '@/app/actions/items'
+import type { CreateItemFormState } from '@/app/lib/item-schemas'
 import { ITEM_CATEGORIES, UCSC_LOCATIONS } from '@/app/lib/definitions'
 
 const INPUT_CLS =
