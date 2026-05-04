@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { logout } from '@/app/actions/auth'
 import { useUnread } from '@/app/lib/unread-context'
+import { useAuth } from '@/app/lib/auth-context'
 
 const navItems = [
   { href: '/lost', label: 'Lost Items', icon: '🔍' },
@@ -13,10 +14,29 @@ const navItems = [
   { href: '/profile', label: 'Profile', icon: '👤' },
 ]
 
+/**
+ * Derive a display name + initial from the current auth state.
+ * Falls back to the email prefix if the profile row hasn't loaded yet
+ * (e.g. immediately after signup, before the trigger has run).
+ */
+function getDisplayInfo(
+  profileName: string | undefined,
+  email: string | undefined,
+): { name: string; initial: string } {
+  const name = profileName?.trim() || email?.split('@')[0] || 'Slug'
+  const initial = name.charAt(0).toUpperCase()
+  return { name, initial }
+}
+
 export default function Sidebar() {
   const pathname = usePathname()
   const { totalUnread } = useUnread()
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+  const { user, profile } = useAuth()
+
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(href + '/')
+
+  const { name, initial } = getDisplayInfo(profile?.display_name, user?.email)
 
   return (
     <>
@@ -34,6 +54,24 @@ export default function Sidebar() {
             </span>
           </Link>
         </div>
+
+        {/* User card — shows real signed-in user from AuthContext */}
+        {user && (
+          <div className="border-b border-zinc-800 px-3 py-3">
+            <Link
+              href="/profile"
+              className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-zinc-900"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-yellow-400 text-sm font-bold text-zinc-950">
+                {initial}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-white">{name}</p>
+                <p className="truncate text-[11px] text-zinc-500">{user.email}</p>
+              </div>
+            </Link>
+          </div>
+        )}
 
         {/* Nav */}
         <nav className="flex flex-col gap-1 p-3 flex-1">

@@ -2,7 +2,7 @@
 
 A lost-and-found platform for UC Santa Cruz students. Post lost items, browse found ones, and message other students directly — all in one place.
 
-Built with Next.js 16, React 19, Tailwind CSS v4, and JWT-based sessions.
+Built with Next.js 16, React 19, Tailwind CSS v4, and Supabase (Auth, Postgres, Storage).
 
 ---
 
@@ -10,6 +10,7 @@ Built with Next.js 16, React 19, Tailwind CSS v4, and JWT-based sessions.
 
 - **Node.js 18+** (check with `node -v`)
 - **npm** (comes with Node — `npm -v` to verify)
+- **A Supabase project** (free tier is fine — see step 2 below)
 
 ---
 
@@ -23,38 +24,57 @@ cd SlugFound
 npm install
 ```
 
-### 2. Set up environment variables
+### 2. Create the Supabase project
+
+1. Go to https://supabase.com/dashboard and click **"New project"**
+2. Name: `slugfound` · Region: `West US (North California)` · Plan: Free
+3. Save the database password — you'll need it later if you use the Supabase CLI
+4. Once provisioned (~2 min), go to **Project Settings → API** and copy:
+   - **Project URL** (`https://xxxxxx.supabase.co`)
+   - **anon public** key (long JWT — safe for the browser, RLS protects the data)
+
+### 3. Run the database migrations
+
+The schema, RLS policies, indexes, triggers, and Storage bucket all live in
+`/supabase/migrations/`. Apply them in order:
+
+1. Open the SQL editor: `https://supabase.com/dashboard/project/<your-project-ref>/sql/new`
+2. Paste each file's contents, **clicking "Run" between each**:
+   - `supabase/migrations/0001_profiles.sql`
+   - `supabase/migrations/0002_items.sql`
+   - `supabase/migrations/0003_storage.sql`
+
+> Optional: After signing up your first user, you can run `supabase/seed.sql` in
+> the SQL editor to load 12 sample items for development.
+
+### 4. Disable email confirmation for local dev
+
+In production you want email confirmation on. For local development, turn it off:
+
+1. Go to **Auth → Providers → Email** in the Supabase dashboard
+2. Toggle **"Confirm email"** OFF
+3. Save
+
+### 5. Set up environment variables
 
 Create a `.env.local` file in the project root:
 
-```bash
-cp .env.local.example .env.local   # if an example file exists
-# — or create it manually:
-touch .env.local
-```
-
-Open `.env.local` and add:
-
 ```env
-SESSION_SECRET=your-secret-key-here
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc... your anon key here
 ```
 
-**For local development** any string works — for example:
+> ⚠️ **Never commit `.env.local`.** It's already in `.gitignore`.
+> The `anon` key is safe to ship to the browser; the `service_role` key is **not** — never put that in `.env.local` for a Next.js client app.
 
-```env
-SESSION_SECRET=slugfound-local-dev-secret-change-in-production
-```
-
-> ⚠️ **Never commit `.env.local` to git.** It's already listed in `.gitignore`.  
-> For production, generate a strong random secret: `openssl rand -hex 32`
-
-### 3. Start the dev server
+### 6. Start the dev server
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000), click **"Get started"**,
+sign up with a `@ucsc.edu` email, and you're in.
 
 ---
 
@@ -62,22 +82,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 | Variable | Required | Description |
 |---|---|---|
-| `SESSION_SECRET` | **Yes** | Secret key used to sign and verify JWT session tokens. Must be the same value across restarts — changing it invalidates all active sessions. |
+| `NEXT_PUBLIC_SUPABASE_URL` | **Yes** | Project URL from Supabase Settings → API. Used by both the browser and server clients. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Yes** | Public anon key from Supabase Settings → API. Safe for the browser — Row Level Security policies protect data. |
 
-That's the only variable the app needs right now. As the backend grows (database, email, storage) more will be added here.
-
----
-
-## Demo credentials
-
-The app ships with a hardcoded demo account for local development:
-
-| Field | Value |
-|---|---|
-| Email | `demo@example.com` |
-| Password | `Password1!` |
-
-> This is defined in `app/actions/auth.ts` → `getUserByEmail`. Replace it when you wire up a real database.
+> The old `SESSION_SECRET` (used by the pre-Sprint-2 JWT auth) is no longer
+> required and can be removed from `.env.local`.
 
 ---
 
@@ -98,24 +107,25 @@ The app ships with a hardcoded demo account for local development:
 app/
   (public)/          # Unauthenticated pages — landing, login, signup
   (app)/             # Authenticated pages — lost, found, messages, create, profile
-  actions/           # Next.js Server Actions (auth)
+  actions/           # Next.js Server Actions (auth, items)
   components/        # Shared UI components
-    messages/        # All messaging UI sub-components
+    messages/        # All messaging UI sub-components (still mock data)
     ui/              # Primitive components (Badge)
-  lib/               # Utilities, types, mock data, session helpers
-proxy.ts             # Route-guard middleware — ⚠️ see DOCS.md before touching
+  lib/
+    supabase/        # Supabase client wrappers (browser, server, proxy)
+    auth-context.tsx # React context exposing the current user/profile
+    items.ts         # Items repository (server-side query helpers)
+    definitions.ts   # Shared types
+    format.ts        # Display helpers (timeAgo, initials)
+proxy.ts             # Next.js 16 proxy — refreshes Supabase session + route guards
+supabase/
+  migrations/        # SQL migrations (apply in order)
+  seed.sql           # Optional development seed data
 ```
 
-See [`DOCS.md`](./DOCS.md) for a full contributor guide and architecture walkthrough.  
-See [`CODETOUR.md`](./CODETOUR.md) for a guided narrative tour of the codebase.
-
----
-
-## Current state
-
-The app is **frontend-only**. There is no database — all item listings and messages are hardcoded mock arrays in `app/lib/`. Authentication works (JWT sessions via `jose`), but the user lookup is a stub.
-
-See the [Known gaps](./DOCS.md#known-gaps) section in DOCS.md for what's next.
+See [`DOCS.md`](./DOCS.md) for the architecture deep dive.
+See [`CODETOUR.md`](./CODETOUR.md) for a guided narrative tour.
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the team workflow.
 
 ---
 
@@ -126,9 +136,10 @@ See the [Known gaps](./DOCS.md#known-gaps) section in DOCS.md for what's next.
 | Next.js | 16.2.3 | Framework (App Router) |
 | React | 19.2.4 | UI |
 | Tailwind CSS | v4 | Styling |
-| `jose` | 6.x | JWT signing / verification |
-| `bcryptjs` | 3.x | Password hashing |
+| Supabase | latest | Auth, Postgres, Storage |
+| `@supabase/ssr` | latest | Server-side rendering integration |
 | `zod` | 4.x | Form validation |
+| `sonner` | latest | Toast notifications |
 | TypeScript | 5.x | Type safety |
 
 ---

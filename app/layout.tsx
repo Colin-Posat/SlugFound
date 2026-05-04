@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,6 +30,19 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-zinc-950 text-white">
         {children}
+        {/* Global toast container — used app-wide for success/error notifications.
+            Mounted at the root so toasts appear on every page including auth. */}
+        <Toaster
+          theme="dark"
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: "rgb(24 24 27)", // zinc-900
+              border: "1px solid rgb(39 39 42)", // zinc-800
+              color: "white",
+            },
+          }}
+        />
       </body>
     </html>
   );

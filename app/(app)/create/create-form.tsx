@@ -1,19 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useActionState, useState } from 'react'
 import Link from 'next/link'
-
-const CATEGORIES = [
-  'Electronics', 'Clothing', 'ID / Cards', 'Keys', 'Books',
-  'Personal Items', 'Jewelry', 'Sports / Recreation', 'Other',
-]
-
-const LOCATIONS = [
-  'McHenry Library', 'Science & Engineering Library', 'Baskin Engineering',
-  'Cowell College', 'Stevenson College', 'Crown College', 'Merrill College',
-  'Kresge College', 'Porter College', 'Oakes College', 'Rachel Carson College',
-  'Quarry Plaza', 'Dining Hall (Unspecified)', 'Bus Stop', 'Other',
-]
+import { toast } from 'sonner'
+import { createItem, type CreateItemFormState } from '@/app/actions/items'
+import { ITEM_CATEGORIES, UCSC_LOCATIONS } from '@/app/lib/definitions'
 
 const INPUT_CLS =
   'rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none transition focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400'
@@ -26,10 +17,24 @@ interface CreateFormProps {
 }
 
 export default function CreateForm({ initialType }: CreateFormProps) {
+  // useActionState wires the form to the createItem server action; on success
+  // it redirects, so we only get a return value when there's an error.
+  const [state, action, pending] = useActionState<CreateItemFormState, FormData>(
+    createItem,
+    undefined,
+  )
+
   const [type, setType] = useState<'lost' | 'found'>(initialType)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  // We track the file as both a controlled state (for preview) and a hidden
+  // input ref so the FormData submitted to the server still includes it.
 
   const backHref = type === 'found' ? '/found' : '/lost'
+
+  // Surface server-level errors as toasts (per-field errors render inline below)
+  if (state?.message) {
+    toast.error(state.message)
+  }
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-10">
@@ -47,11 +52,10 @@ export default function CreateForm({ initialType }: CreateFormProps) {
         </p>
       </div>
 
-      {/* ⚠️ TODO: Wire a `createListing` server action to this form.
-           The submit button currently does nothing — the form has no action prop.
-           Steps: create app/actions/listings.ts → validate with Zod → insert into DB
-                  → redirect to the new listing page */}
-      <form className="flex flex-col gap-5">
+      <form action={action} className="flex flex-col gap-5">
+        {/* Hidden type field driven by the toggle below */}
+        <input type="hidden" name="type" value={type} />
+
         {/* ── Section 1: What happened ── */}
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
           <h2 className="mb-1 text-sm font-semibold text-white">What happened?</h2>
@@ -108,11 +112,17 @@ export default function CreateForm({ initialType }: CreateFormProps) {
                 id="title"
                 name="title"
                 type="text"
+                required
                 placeholder={
-                  type === 'lost' ? 'e.g. AirPods Pro, Blue Jacket…' : 'e.g. iPhone 14, Brown Wallet…'
+                  type === 'lost'
+                    ? 'e.g. AirPods Pro, Blue Jacket…'
+                    : 'e.g. iPhone 14, Brown Wallet…'
                 }
                 className={INPUT_CLS}
               />
+              {state?.errors?.title && (
+                <p className="text-xs text-red-400">{state.errors.title[0]}</p>
+              )}
             </div>
 
             {/* Category + Location */}
@@ -121,37 +131,30 @@ export default function CreateForm({ initialType }: CreateFormProps) {
                 <label htmlFor="category" className="text-sm font-medium text-zinc-300">
                   Category
                 </label>
-                <select id="category" name="category" className={SELECT_CLS}>
-                  <option value="">Select a category</option>
-                  {CATEGORIES.map((c) => (
-                    <option key={c}>{c}</option>
+                <select id="category" name="category" required defaultValue="" className={SELECT_CLS}>
+                  <option value="" disabled>Select a category</option>
+                  {ITEM_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
+                {state?.errors?.category && (
+                  <p className="text-xs text-red-400">{state.errors.category[0]}</p>
+                )}
               </div>
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="location" className="text-sm font-medium text-zinc-300">
                   Location on campus
                 </label>
-                <select id="location" name="location" className={SELECT_CLS}>
-                  <option value="">Select a location</option>
-                  {LOCATIONS.map((l) => (
-                    <option key={l}>{l}</option>
+                <select id="location" name="location" required defaultValue="" className={SELECT_CLS}>
+                  <option value="" disabled>Select a location</option>
+                  {UCSC_LOCATIONS.map((l) => (
+                    <option key={l} value={l}>{l}</option>
                   ))}
                 </select>
+                {state?.errors?.location && (
+                  <p className="text-xs text-red-400">{state.errors.location[0]}</p>
+                )}
               </div>
-            </div>
-
-            {/* Date */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="date" className="text-sm font-medium text-zinc-300">
-                {type === 'lost' ? 'Date lost' : 'Date found'}
-              </label>
-              <input
-                id="date"
-                name="date"
-                type="date"
-                className={SELECT_CLS}
-              />
             </div>
 
             {/* Description */}
@@ -163,9 +166,13 @@ export default function CreateForm({ initialType }: CreateFormProps) {
                 id="description"
                 name="description"
                 rows={4}
+                required
                 placeholder="Describe the item — color, brand, identifying marks, exact location…"
                 className={`resize-none ${INPUT_CLS}`}
               />
+              {state?.errors?.description && (
+                <p className="text-xs text-red-400">{state.errors.description[0]}</p>
+              )}
             </div>
           </div>
         </div>
@@ -173,11 +180,10 @@ export default function CreateForm({ initialType }: CreateFormProps) {
         {/* ── Section 3: Photo ── */}
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
           <h2 className="mb-1 text-sm font-semibold text-white">
-            Photo{' '}
-            <span className="font-normal text-zinc-600">(optional)</span>
+            Photo <span className="font-normal text-zinc-600">(optional)</span>
           </h2>
           <p className="mb-4 text-xs text-zinc-500">
-            A clear photo helps the owner identify their item instantly.
+            A clear photo helps the owner identify their item instantly. Max 5 MB · JPG, PNG, WebP.
           </p>
 
           {selectedFile ? (
@@ -206,16 +212,23 @@ export default function CreateForm({ initialType }: CreateFormProps) {
             >
               <span className="text-3xl">📷</span>
               <span className="text-sm text-zinc-400">Click to upload a photo</span>
-              <span className="text-xs text-zinc-600">PNG, JPG up to 10 MB</span>
-              <input
-                id="photo"
-                name="photo"
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
-              />
+              <span className="text-xs text-zinc-600">PNG, JPG, WebP up to 5 MB</span>
             </label>
+          )}
+
+          {/* The actual file input — always rendered so its value is included in
+              the FormData submission. We hide it when the preview card is shown. */}
+          <input
+            id="photo"
+            name="photo"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+          />
+
+          {state?.errors?.photo && (
+            <p className="mt-2 text-xs text-red-400">{state.errors.photo[0]}</p>
           )}
         </div>
 
@@ -223,9 +236,17 @@ export default function CreateForm({ initialType }: CreateFormProps) {
         <div className="flex gap-3 pt-1">
           <button
             type="submit"
-            className="flex-1 rounded-full bg-yellow-400 py-2.5 text-sm font-bold text-zinc-950 transition hover:bg-yellow-300"
+            disabled={pending}
+            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-yellow-400 py-2.5 text-sm font-bold text-zinc-950 transition hover:bg-yellow-300 disabled:opacity-50"
           >
-            {type === 'lost' ? 'Post Lost Item' : 'Post Found Item'}
+            {pending ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-950 border-t-transparent" />
+                Posting…
+              </>
+            ) : (
+              type === 'lost' ? 'Post Lost Item' : 'Post Found Item'
+            )}
           </button>
           <Link
             href={backHref}

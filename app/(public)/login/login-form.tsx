@@ -1,11 +1,21 @@
 'use client'
 
+/**
+ * Sign-in form (US 2.2).
+ *
+ * Wired to the `login` server action which calls
+ * supabase.auth.signInWithPassword() and redirects to /lost on success.
+ */
+
 import { useActionState } from 'react'
-import { login } from '@/app/actions/auth'
 import Link from 'next/link'
+import { login, type AuthFormState } from '@/app/actions/auth'
+
+const INPUT_CLS =
+  'rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none transition focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400'
 
 export default function LoginForm() {
-  const [state, action, pending] = useActionState(login, undefined)
+  const [state, action, pending] = useActionState<AuthFormState, FormData>(login, undefined)
 
   return (
     <form action={action} className="flex flex-col gap-4">
@@ -19,7 +29,7 @@ export default function LoginForm() {
           type="email"
           autoComplete="email"
           placeholder="slug@ucsc.edu"
-          className="rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none transition focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400"
+          className={INPUT_CLS}
         />
         {state?.errors?.email && (
           <p className="text-xs text-red-400">{state.errors.email[0]}</p>
@@ -41,7 +51,7 @@ export default function LoginForm() {
           type="password"
           autoComplete="current-password"
           placeholder="••••••••"
-          className="rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none transition focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400"
+          className={INPUT_CLS}
         />
         {state?.errors?.password && (
           <p className="text-xs text-red-400">{state.errors.password[0]}</p>

@@ -1,45 +1,34 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { decrypt } from '@/app/lib/session'
-import { cookies } from 'next/headers'
+/**
+ * Next.js 16 proxy — runs on every request before the page renders.
+ *
+ * NOTE: In Next.js 16 the file convention was renamed from `middleware.ts` to
+ * `proxy.ts`, and the exported function from `middleware` to `proxy`. The old
+ * `middleware.ts` name still works but emits a deprecation warning.
+ *
+ * Two responsibilities:
+ *   1. Refresh the Supabase session cookie so signed-in users don't get kicked
+ *      out when their access token expires (Supabase access tokens are 1 hour).
+ *   2. Enforce route protection — unauthenticated users hitting protected pages
+ *      are redirected to /login.
+ *
+ * The actual logic lives in app/lib/supabase/proxy.ts so it can be tested
+ * independently of Next.js's matcher config.
+ */
+import type { NextRequest } from 'next/server'
+import { updateSession } from '@/app/lib/supabase/proxy'
 
-// ⚠️  THIS FILE IS NOT ACTIVE.
-//
-// Next.js middleware must be in a file named `middleware.ts` at the project root,
-// and the exported function must be named `middleware`. This file is named `proxy.ts`
-// and exports a function named `proxy` — Next.js ignores it entirely.
-//
-// To activate route protection:
-//   1. Rename this file: mv proxy.ts middleware.ts
-//   2. Rename the exported function below to `middleware`
-//
-// Until then, ALL routes are publicly accessible without a session.
-
-// Routes that require a valid session — unauthenticated visitors are redirected to /login
-const protectedPrefixes = ['/lost', '/found', '/create', '/profile', '/dashboard']
-
-// Routes that redirect to /lost when the user is already signed in
-// (prevents signed-in users from seeing the login/signup pages)
-const authRoutes = ['/login', '/signup']
-
-export default async function proxy(req: NextRequest) {
-  const path = req.nextUrl.pathname
-  const isProtected = protectedPrefixes.some((p) => path === p || path.startsWith(p + '/'))
-  const isAuthRoute = authRoutes.includes(path)
-
-  const cookie = (await cookies()).get('session')?.value
-  const session = await decrypt(cookie)
-
-  if (isProtected && !session?.userId) {
-    return NextResponse.redirect(new URL('/login', req.nextUrl))
-  }
-
-  if (isAuthRoute && session?.userId) {
-    return NextResponse.redirect(new URL('/lost', req.nextUrl))
-  }
-
-  return NextResponse.next()
+export async function proxy(request: NextRequest) {
+  return await updateSession(request)
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|.*\\.png$).*)'],
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - _next/static (static assets)
+     * - _next/image  (image optimizer)
+     * - favicon.ico, .png, .svg, .jpg, .jpeg, .webp, .gif (static images)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|svg|jpg|jpeg|webp|gif)$).*)',
+  ],
 }
