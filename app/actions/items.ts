@@ -103,3 +103,42 @@ export async function createItem(
   redirect(validated.data.type === 'lost' ? '/lost' : '/found')
 }
 
+/**
+ * Update the status of an item (active / claimed / resolved).
+ * Only the item owner can call this — RLS enforces it server-side.
+ *
+ * Called from the item detail page when the owner clicks "Mark as resolved"
+ * or similar. Returns `{ error }` on failure for the client to show a toast.
+ */
+export async function updateItemStatus(
+  itemId: string,
+  status: 'active' | 'claimed' | 'resolved',
+): Promise<{ error?: string }> {
+  const supabase = await createSupabaseServerClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'You must be signed in to update an item.' }
+  }
+
+  // RLS verifies user_id = auth.uid() — we don't need to check ownership here
+  // because Postgres rejects the update for non-owners.
+  const { error } = await supabase
+    .from('items')
+    .update({ status })
+    .eq('id', itemId)
+
+  if (error) {
+    return { error: `Could not update status: ${error.message}` }
+  }
+
+  revalidatePath('/lost')
+  revalidatePath('/found')
+  revalidatePath('/profile')
+  revalidatePath(`/lost/${itemId}`)
+  revalidatePath(`/found/${itemId}`)
+
+  return {}
+}
