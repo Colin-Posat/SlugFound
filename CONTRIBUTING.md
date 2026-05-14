@@ -63,6 +63,35 @@ test('returns "just now" for timestamps within 60 seconds', () => {
 
 > **Async Server Components** cannot be unit-tested with Jest. Write E2E tests for those instead.
 
+### Test rules
+
+**File naming** — mirror the source path under `app/`:
+```
+app/lib/format.ts            → __tests__/lib/format.test.ts
+app/components/item-card.tsx → __tests__/components/item-card.test.tsx
+```
+
+**Imports** — always use the `@/` alias, never relative paths.
+
+**React Testing Library query priority:**
+1. `getByRole` — gold standard
+2. `getByLabelText` — for form fields
+3. `getByText` — for content
+4. `getByTestId` — last resort only, never for interactive elements
+
+**Test behaviour, not implementation** — test what the user sees and does, not internal state or private functions.
+
+**Supabase** — never make real network calls in tests. Mock the client:
+```ts
+jest.mock('@/lib/supabase/client')
+```
+
+**Structure** — use `describe` to group related cases, one concept per `it`/`test`. Name tests as sentences: `it('shows an error when the email is missing')`.
+
+**TypeScript** — all test files must be `.test.ts` or `.test.tsx`. No `any` types.
+
+**Coverage target** — 80%+ on `app/lib/` utilities and `'use client'` components. Run `npm run test:coverage` to check.
+
 ### Follow the codebase patterns
 
 Read the existing code in `app/components/` and `app/lib/` before writing new code. The app uses:

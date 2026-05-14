@@ -158,6 +158,8 @@ See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the team workflow.
 | `zod` | 4.x | Form validation |
 | `sonner` | latest | Toast notifications |
 | TypeScript | 5.x | Type safety |
+| Jest | 30.x | Unit testing + coverage |
+| React Testing Library | 16.x | Component testing |
 
 ---
 
