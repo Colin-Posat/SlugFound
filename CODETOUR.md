@@ -22,6 +22,7 @@ A complete walkthrough of the codebase for new teammates. Read top to bottom onc
 10. [Shared UI components](#10-shared-ui-components)
 11. [Environment variables](#11-environment-variables)
 12. [Known gaps and next steps](#12-known-gaps-and-next-steps)
+13. [Testing](#13-testing)
 
 ---
 
@@ -109,6 +110,10 @@ SlugFound/
 │
 ├── proxy.ts                           # Next.js 16 proxy entry (auth + session refresh)
 │
+├── __tests__/                         # Jest unit tests (mirrors app/ structure)
+├── jest.config.ts                     # Jest config using next/jest preset
+├── jest.setup.ts                      # Imports @testing-library/jest-dom matchers
+│
 ├── supabase/
 │   ├── migrations/
 │   │   ├── 0001_profiles.sql          # profiles table + auto-create trigger
@@ -117,7 +122,7 @@ SlugFound/
 │   └── seed.sql                       # 12 sample items for dev
 │
 ├── public/                            # Static assets
-├── README.md                          # Setup + how to run
+├── README.md                          # Setup, how to run, how to test
 ├── DOCS.md                            # Architecture deep dive
 ├── CONTRIBUTING.md                    # Team workflow
 └── CODETOUR.md                        # This file
@@ -425,6 +430,49 @@ These are real issues, not hypothetical. See [DOCS.md § "Known gaps"](./DOCS.md
 3. **No password reset flow** — login form's "Forgot password?" link goes to `#`.
 4. **`AppNav` component is dead code** — `components/app-nav.tsx` is not imported anywhere. Safe to delete.
 5. **Email confirmation is disabled in dev** — re-enable in Supabase dashboard before production.
+
+---
+
+---
+
+## 13. Testing
+
+The project uses **Jest + React Testing Library** for unit tests.
+
+### Where tests live
+
+```
+__tests__/          # mirrors the app/ structure
+  format.test.ts    # tests for app/lib/format.ts
+  item-card.test.tsx # tests for app/components/item-card.tsx
+  …
+```
+
+### What can and cannot be tested with Jest
+
+| Can test | Cannot test |
+|---|---|
+| Utility functions (`app/lib/format.ts`, `app/lib/definitions.ts`) | Async Server Components (they rely on server-only APIs) |
+| Synchronous Server Components | Server Actions that call Supabase directly |
+| Client Components (`'use client'`) | End-to-end user flows |
+
+For async Server Components and full user flows, use an E2E framework like Playwright.
+
+### Config files
+
+| File | Purpose |
+|---|---|
+| `jest.config.ts` | Loads `next/jest` preset — handles SWC transforms, `@/*` path alias, CSS mocking, `.env` loading |
+| `jest.setup.ts` | Imports `@testing-library/jest-dom` so matchers like `.toBeInTheDocument()` are available everywhere |
+
+### Running tests
+
+```bash
+npm test            # run all tests once
+npm run test:watch  # watch mode — re-runs on file save
+```
+
+Follow the TDD cycle: write a failing test first, then write the implementation. See [CONTRIBUTING.md §2](./CONTRIBUTING.md) for the full workflow.
 
 ---
 

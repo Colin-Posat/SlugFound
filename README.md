@@ -98,6 +98,23 @@ sign up with a `@ucsc.edu` email, and you're in.
 | `npm run build` | Production build (outputs to `.next/`) |
 | `npm run start` | Serve the production build locally |
 | `npm run lint` | Run ESLint across the project |
+| `npm test` | Run Jest test suite once |
+| `npm run test:watch` | Run Jest in watch mode (re-runs on file change) |
+| `npm run test:coverage` | Run Jest with v8 coverage report (output in `coverage/`) |
+
+---
+
+## Testing
+
+Tests live in `__tests__/` at the project root and use Jest + React Testing Library. Write tests **before** the implementation (TDD).
+
+```bash
+npm test                 # run all tests once
+npm run test:watch       # watch mode — re-runs on save
+npm run test:coverage    # generate coverage report (output in coverage/)
+```
+
+> Async Server Components cannot be unit-tested with Jest. For those, use E2E tests. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full testing strategy.
 
 ---
 

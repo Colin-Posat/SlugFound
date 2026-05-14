@@ -8,11 +8,12 @@ Team workflow for developing features and fixes. Follow this process every time.
 
 ```
 1. Plan     → /plan "feature description"
-2. Code     → Write, follow existing patterns
-3. Review   → /code-review, fix issues
-4. Document → Update README/DOCS/CODETOUR/comments as needed
-5. Cleanup  → /refactor-clean to catch dead code
-6. Merge    → Create PR, get approval, merge
+2. Test     → Write failing tests first (Jest) — red
+3. Code     → Write implementation until tests pass — green
+4. Review   → /code-review, fix issues
+5. Document → Update README/DOCS/CODETOUR/comments as needed
+6. Cleanup  → /refactor-clean to catch dead code
+7. Merge    → Create PR, get approval, merge
 ```
 
 ---
@@ -37,6 +38,30 @@ The plan should cover:
 ---
 
 ## 2. While Writing Code
+
+### Write tests first (TDD)
+
+Before implementing anything, write a failing test. This forces you to think through the interface before the implementation.
+
+```
+1. Create __tests__/<module>.test.ts mirroring the file you're about to write
+2. Write tests that describe the expected behaviour — run npm test to confirm they fail (red)
+3. Write the minimum implementation to make them pass (green)
+4. Refactor freely — tests catch regressions
+```
+
+Example:
+```typescript
+// __tests__/format.test.ts — written BEFORE editing app/lib/format.ts
+import { timeAgo } from '@/lib/format'
+
+test('returns "just now" for timestamps within 60 seconds', () => {
+  const recent = new Date(Date.now() - 30_000).toISOString()
+  expect(timeAgo(recent)).toBe('just now')
+})
+```
+
+> **Async Server Components** cannot be unit-tested with Jest. Write E2E tests for those instead.
 
 ### Follow the codebase patterns
 
@@ -183,6 +208,7 @@ Before pushing a commit, verify:
 
 - [ ] TypeScript `npx tsc --noEmit` passes (zero errors)
 - [ ] ESLint `npm run lint` passes
+- [ ] Tests pass `npm test` (no regressions)
 - [ ] No hardcoded secrets (API keys, database URLs, etc.)
 - [ ] Immutable patterns used (no mutation)
 - [ ] Complex logic has inline comments
