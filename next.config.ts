@@ -1,6 +1,10 @@
+import path from 'path'
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
   experimental: {
     // Server Actions default to a 1 MB request body limit. We allow image
     // uploads up to 5 MB on the Create form (matches the Storage bucket cap),

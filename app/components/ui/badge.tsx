@@ -1,10 +1,13 @@
-export type BadgeVariant = 'lost' | 'found' | 'active' | 'resolved'
+export type BadgeVariant = 'lost' | 'found' | 'active' | 'resolved' | 'match-high' | 'match-medium' | 'match-low'
 
 const STYLES: Record<BadgeVariant, string> = {
   lost: 'border-red-500/20 bg-red-500/10 text-red-400',
   found: 'border-green-500/20 bg-green-500/10 text-green-400',
   active: 'border-zinc-700 bg-zinc-800/50 text-zinc-400',
   resolved: 'border-yellow-400/20 bg-yellow-400/10 text-yellow-400',
+  'match-high': 'border-green-400/40 bg-green-400/20 text-green-300',
+  'match-medium': 'border-yellow-400/40 bg-yellow-400/20 text-yellow-300',
+  'match-low': 'border-orange-400/40 bg-orange-400/20 text-orange-300',
 }
 
 interface BadgeProps {

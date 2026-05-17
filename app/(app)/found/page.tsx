@@ -30,12 +30,20 @@ export default async function FoundPage({ searchParams }: PageProps) {
             {items.length} {items.length === 1 ? 'listing' : 'listings'}
           </p>
         </div>
-        <Link
-          href="/create?type=found"
-          className="inline-flex h-10 items-center rounded-full bg-yellow-400 px-5 text-sm font-semibold text-zinc-950 transition hover:bg-yellow-300"
-        >
-          + Report Found Item
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/found/photo-search"
+            className="inline-flex h-10 items-center rounded-full border border-zinc-700 px-5 text-sm font-semibold text-zinc-300 transition hover:border-zinc-500 hover:text-white"
+          >
+            📷 Find by Photo
+          </Link>
+          <Link
+            href="/create?type=found"
+            className="inline-flex h-10 items-center rounded-full bg-yellow-400 px-5 text-sm font-semibold text-zinc-950 transition hover:bg-yellow-300"
+          >
+            + Report Found Item
+          </Link>
+        </div>
       </div>
 
       <ItemsFilter
