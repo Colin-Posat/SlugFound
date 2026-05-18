@@ -92,7 +92,10 @@ SlugFound/
 │   ├── components/                    # Shared UI
 │   │   ├── sidebar.tsx                # Desktop sidebar + mobile tab bar
 │   │   ├── item-card.tsx              # Listing card
+│   │   ├── item-detail.tsx            # Full item detail view (shared by /lost/[id] + /found/[id])
 │   │   ├── items-filter.tsx           # URL-driven search/category/location filter
+│   │   ├── location-map-picker.tsx    # Leaflet map with UCSC preset markers
+│   │   ├── location-map-picker-dynamic.tsx  # next/dynamic SSR wrapper for the map
 │   │   ├── messages/                  # All messaging UI (mock)
 │   │   └── ui/badge.tsx               # Pill component
 │   │
@@ -118,7 +121,8 @@ SlugFound/
 │   ├── migrations/
 │   │   ├── 0001_profiles.sql          # profiles table + auto-create trigger
 │   │   ├── 0002_items.sql             # items table + RLS + indexes
-│   │   └── 0003_storage.sql           # item-images bucket + RLS
+│   │   ├── 0003_storage.sql           # item-images bucket + RLS
+│   │   └── 0004_item_coordinates.sql  # lat/lng columns on items
 │   └── seed.sql                       # 12 sample items for dev
 │
 ├── public/                            # Static assets
@@ -297,7 +301,7 @@ ItemCategory    = (one of ITEM_CATEGORIES)
 Item {
   id, user_id, type, title, description,
   category, location, status, image_url,
-  emoji, created_at, updated_at,
+  emoji, lat, lng, created_at, updated_at,
   profile?: { id, display_name, avatar_url } | null
 }
 
@@ -343,6 +347,8 @@ The action:
 4. Inserts the item row (RLS verifies `user_id = auth.uid()`)
 5. Calls `revalidatePath('/lost' | '/found')` and redirects
 
+The location `<select>` was replaced by `<LocationMapPicker>` — an interactive Leaflet map showing preset UCSC markers. Users can click a preset or tap anywhere on the map. `lat`/`lng` are stored alongside the text `location` label; items posted before this change have `null` coordinates and are unaffected.
+
 ### Messages
 
 **Files:** `app/(app)/messages/page.tsx`, `app/components/messages/messages-view.tsx`, all of `app/components/messages/`
@@ -382,6 +388,16 @@ Renders one item. Shows the uploaded image if present, otherwise a large emoji p
 ### ItemsFilter — `components/items-filter.tsx`
 
 URL-driven search/filter UI shared by `/lost` and `/found`. State is mirrored to URL searchParams which re-runs the server page.
+
+### LocationMapPicker — `components/location-map-picker.tsx`
+
+Interactive Leaflet map centered on UCSC campus. Shows preset markers for 14 campus locations; users can also click anywhere to place a custom pin. Accepts `value`, `onChange`, and optional `readOnly` prop (used on item detail pages).
+
+Always import via the dynamic wrapper (`location-map-picker-dynamic.tsx`) rather than directly — Leaflet accesses `window`/`document` and will crash during SSR if imported without `{ ssr: false }`.
+
+```typescript
+import LocationMapPicker from '@/app/components/location-map-picker-dynamic'
+```
 
 ### Sidebar — `components/sidebar.tsx`
 

@@ -13,7 +13,7 @@ export default function PhotoSearchPage() {
         </Link>
         <h1 className="text-3xl font-bold text-white">Find by Photo</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          Upload a photo of your lost item and we'll find the closest matches.
+          Upload a photo of your lost item and we&apos;ll find the closest matches.
         </p>
       </div>
 

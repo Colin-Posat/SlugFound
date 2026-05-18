@@ -42,6 +42,8 @@ export type Item = {
   status: ItemStatus
   image_url: string | null
   emoji: string | null
+  lat: number | null
+  lng: number | null
   created_at: string
   updated_at: string
   // Hydrated when we join the profiles table (optional)
@@ -93,22 +95,29 @@ export const CURRENT_USER_ID = 'me'
 
 // ─── Campus locations (used by Create form + filters) ───────────────────────
 
-export const UCSC_LOCATIONS = [
-  'McHenry Library',
-  'Science & Engineering Library',
-  'Baskin Engineering',
-  'Cowell College',
-  'Stevenson College',
-  'Crown College',
-  'Merrill College',
-  'Kresge College',
-  'Porter College',
-  'Oakes College',
-  'Rachel Carson College',
-  'Quarry Plaza',
-  'Dining Hall',
-  'Bus Stop',
-  'Other',
+export const UCSC_PRESET_LOCATIONS = [
+  { label: 'McHenry Library',              lat: 36.9996, lng: -122.0579 },
+  { label: 'Science & Engineering Library', lat: 37.0002, lng: -122.0626 },
+  { label: 'Baskin Engineering',            lat: 37.0000, lng: -122.0643 },
+  { label: 'Cowell College',                lat: 36.9987, lng: -122.0562 },
+  { label: 'Stevenson College',             lat: 36.9976, lng: -122.0569 },
+  { label: 'Crown College',                 lat: 37.0004, lng: -122.0596 },
+  { label: 'Merrill College',               lat: 36.9990, lng: -122.0608 },
+  { label: 'Kresge College',                lat: 37.0014, lng: -122.0638 },
+  { label: 'Porter College',                lat: 37.0030, lng: -122.0657 },
+  { label: 'Oakes College',                 lat: 36.9944, lng: -122.0620 },
+  { label: 'Rachel Carson College',         lat: 36.9958, lng: -122.0638 },
+  { label: 'Quarry Plaza',                  lat: 36.9996, lng: -122.0603 },
+  { label: 'Dining Hall',                   lat: 36.9993, lng: -122.0572 },
+  { label: 'Bus Stop',                      lat: 36.9985, lng: -122.0558 },
 ] as const
+
+export type UcscPresetLocation = (typeof UCSC_PRESET_LOCATIONS)[number]
+
+// Backward-compat string array — items-filter.tsx and the filter query use this.
+export const UCSC_LOCATIONS = [
+  ...UCSC_PRESET_LOCATIONS.map((p) => p.label),
+  'Other',
+] as const satisfies readonly string[]
 
 export type UcscLocation = (typeof UCSC_LOCATIONS)[number]

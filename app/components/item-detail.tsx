@@ -17,6 +17,7 @@ import Badge, { type BadgeVariant } from '@/app/components/ui/badge'
 import { initialFromName, timeAgo } from '@/app/lib/format'
 import { updateItemStatus } from '@/app/actions/items'
 import type { Item, ItemStatus } from '@/app/lib/definitions'
+import LocationMapPicker from '@/app/components/location-map-picker-dynamic'
 
 interface ItemDetailProps {
   item: Item
@@ -104,6 +105,20 @@ export default function ItemDetail({ item, isOwner }: ItemDetailProps) {
           {item.description}
         </p>
       </div>
+
+      {/* Map — only shown when precise coordinates were saved with the item */}
+      {item.lat !== null && item.lng !== null && (
+        <div className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Location
+          </h2>
+          <LocationMapPicker
+            value={{ lat: item.lat, lng: item.lng, label: item.location }}
+            onChange={() => undefined}
+            readOnly
+          />
+        </div>
+      )}
 
       {/* Poster card */}
       <div className="mb-8 flex items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-5">

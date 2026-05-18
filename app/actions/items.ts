@@ -44,6 +44,8 @@ export async function createItem(
     description: formData.get('description'),
     category: formData.get('category'),
     location: formData.get('location'),
+    lat: formData.get('lat'),
+    lng: formData.get('lng'),
   })
 
   if (!validated.success) {
@@ -89,6 +91,8 @@ export async function createItem(
     category: validated.data.category,
     location: validated.data.location,
     image_url: imageUrl,
+    lat: validated.data.lat ?? null,
+    lng: validated.data.lng ?? null,
   })
 
   if (insertError) {

@@ -5,7 +5,10 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { createItem } from '@/app/actions/items'
 import type { CreateItemFormState } from '@/app/lib/item-schemas'
-import { ITEM_CATEGORIES, UCSC_LOCATIONS } from '@/app/lib/definitions'
+import { ITEM_CATEGORIES } from '@/app/lib/definitions'
+import LocationMapPicker, {
+  type MapLocation,
+} from '@/app/components/location-map-picker-dynamic'
 
 const INPUT_CLS =
   'rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none transition focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400'
@@ -31,6 +34,7 @@ export default function CreateForm({ initialType }: CreateFormProps) {
   )
 
   const [type, setType] = useState<'lost' | 'found'>(initialType)
+  const [mapLocation, setMapLocation] = useState<MapLocation | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   // We track the file as both a controlled state (for preview) and a hidden
   // input ref so the FormData submitted to the server still includes it.
@@ -239,46 +243,64 @@ export default function CreateForm({ initialType }: CreateFormProps) {
                 )}
               </div>
 
-              {/* Category + Location */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="category" className="text-sm font-medium text-zinc-300">
-                    Category
-                  </label>
-                  <select
-                    id="category"
-                    name="category"
-                    required
-                    value={category}
-                    onChange={(e) => {
-                      setCategory(e.target.value)
-                      clearAiFilled('category')
-                    }}
-                    className={categoryCls}
-                  >
-                    <option value="" disabled>Select a category</option>
-                    {ITEM_CATEGORIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                  {state?.errors?.category && (
-                    <p className="text-xs text-red-400">{state.errors.category[0]}</p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="location" className="text-sm font-medium text-zinc-300">
-                    Location on campus
-                  </label>
-                  <select id="location" name="location" required defaultValue="" className={SELECT_CLS}>
-                    <option value="" disabled>Select a location</option>
-                    {UCSC_LOCATIONS.map((l) => (
-                      <option key={l} value={l}>{l}</option>
-                    ))}
-                  </select>
-                  {state?.errors?.location && (
-                    <p className="text-xs text-red-400">{state.errors.location[0]}</p>
-                  )}
-                </div>
+              {/* Category */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="category" className="text-sm font-medium text-zinc-300">
+                  Category
+                </label>
+                <select
+                  id="category"
+                  name="category"
+                  required
+                  value={category}
+                  onChange={(e) => {
+                    setCategory(e.target.value)
+                    clearAiFilled('category')
+                  }}
+                  className={categoryCls}
+                >
+                  <option value="" disabled>Select a category</option>
+                  {ITEM_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                {state?.errors?.category && (
+                  <p className="text-xs text-red-400">{state.errors.category[0]}</p>
+                )}
+              </div>
+
+              {/* Location map picker */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-zinc-300">
+                  Location on campus
+                </label>
+                <p className="text-xs text-zinc-500">
+                  Click a preset marker or tap anywhere on the map to pin the exact spot.
+                </p>
+
+                {/* Hidden inputs carry map state into FormData for the server action */}
+                <input type="hidden" name="location" value={mapLocation?.label ?? ''} />
+                <input type="hidden" name="lat"      value={mapLocation?.lat  ?? ''} />
+                <input type="hidden" name="lng"      value={mapLocation?.lng  ?? ''} />
+
+                <LocationMapPicker value={mapLocation} onChange={setMapLocation} />
+
+                {mapLocation && (
+                  <p className="text-xs text-yellow-400">
+                    📍 {mapLocation.label}
+                    {mapLocation.label === 'Other' &&
+                      ` (${mapLocation.lat.toFixed(5)}, ${mapLocation.lng.toFixed(5)})`}
+                  </p>
+                )}
+                {state?.errors?.location && (
+                  <p className="text-xs text-red-400">{state.errors.location[0]}</p>
+                )}
+                {state?.errors?.lat && (
+                  <p className="text-xs text-red-400">{state.errors.lat[0]}</p>
+                )}
+                {state?.errors?.lng && (
+                  <p className="text-xs text-red-400">{state.errors.lng[0]}</p>
+                )}
               </div>
 
               {/* Description */}

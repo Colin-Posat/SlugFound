@@ -255,7 +255,10 @@ items_type_created_idx  on items (type, created_at desc)  -- lost/found list que
 items_category_idx      on items (category)               -- category filter
 items_status_idx        on items (status)                 -- status filter
 items_user_id_idx       on items (user_id)                -- profile listings
+items_coords_idx        on items (lat, lng) WHERE lat IS NOT NULL  -- future radius filter
 ```
+
+The `items` table also has nullable `lat DOUBLE PRECISION` and `lng DOUBLE PRECISION` columns (migration `0004`) that store precise pin coordinates from the map location picker. Existing rows have `NULL` coordinates and are unaffected.
 
 ### The repository pattern
 
@@ -359,6 +362,16 @@ Server page reads `?type=lost|found` from searchParams. Form is a client compone
 2. If a photo is attached, uploads to `item-images/<user_id>/<uuid>.<ext>` and gets a public URL
 3. Inserts into `items` (RLS auto-attaches `user_id` via `auth.uid()` check)
 4. `revalidatePath('/lost' | '/found')` + redirect
+
+### Map location picker
+
+**Files:** `(app)/create/create-form.tsx`, `components/location-map-picker.tsx`, `components/location-map-picker-dynamic.tsx`, `actions/items.ts → createItem()`
+
+The location `<select>` dropdown was replaced by an interactive Leaflet map. Preset markers for 14 UCSC campus locations are shown; users can also click anywhere on the map to place a custom pin. The selected coordinates are submitted as hidden form inputs (`lat`, `lng`) alongside the text label (`location`).
+
+On the item detail page, if an item has coordinates, a read-only map with a pin is shown below the description. Items posted before this feature have `null` coordinates and continue to display the text location only.
+
+The map component must be dynamically imported with `{ ssr: false }` because Leaflet uses browser APIs (`window`, `document`).
 
 ### Profile (US 2.6)
 
