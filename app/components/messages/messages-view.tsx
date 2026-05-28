@@ -1,10 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Conversation, ChatMessage } from '@/app/lib/definitions'
-import { MOCK_MESSAGES } from '@/app/lib/mock-messages'
+import { toast } from 'sonner'
+import type { Conversation, ChatMessage, MessageRow } from '@/app/lib/definitions'
+import { createSupabaseBrowserClient } from '@/app/lib/supabase/client'
 import { useUnread } from '@/app/lib/unread-context'
+import { useRealtimeMessages } from '@/app/lib/use-realtime-messages'
+import { markConversationRead } from '@/app/actions/messages'
 import ConversationList from './conversation-list'
 import MessageThread from './message-thread'
 import EmptyThread from './empty-thread'
@@ -12,36 +15,98 @@ import EmptyThread from './empty-thread'
 interface MessagesViewProps {
   conversations: readonly Conversation[]
   activeId: string | null
+  currentUserId: string
+  initialMessages: Record<string, readonly ChatMessage[]>
 }
 
-export default function MessagesView({ conversations, activeId }: MessagesViewProps) {
+export default function MessagesView({
+  conversations,
+  activeId,
+  currentUserId,
+  initialMessages,
+}: MessagesViewProps) {
   const router = useRouter()
-  const { unreadCounts, clearUnread } = useUnread()
+  const { unreadCounts, clearUnread, incrementUnread } = useUnread()
 
-  // Messages are stored in client state, seeded from mock data on first render.
-  // They are NOT persisted — refreshing the page resets to mock data.
-  // When a database is added, this state should be replaced with a server fetch.
   const [messagesByConversation, setMessagesByConversation] = useState<
     Record<string, readonly ChatMessage[]>
-  >(() => ({ ...MOCK_MESSAGES }))
+  >(() => ({ ...initialMessages }))
+
+  const [loadedConversations, setLoadedConversations] = useState<Set<string>>(
+    () => new Set(Object.keys(initialMessages)),
+  )
 
   const activeConversation = activeId
     ? (conversations.find((c) => c.id === activeId) ?? null)
     : null
 
-  // Clear the unread badge whenever a conversation is opened.
-  // clearUnread has a stable reference (wrapped in useCallback in UnreadContext)
-  // so this effect only re-runs when activeId actually changes.
+  // Fetch messages when switching to a conversation not yet loaded
+  useEffect(() => {
+    if (!activeId || loadedConversations.has(activeId)) return
+
+    const supabase = createSupabaseBrowserClient()
+    supabase
+      .from('messages')
+      .select('*')
+      .eq('conversation_id', activeId)
+      .order('created_at', { ascending: true })
+      .then(({ data, error }) => {
+        if (error) {
+          toast.error('Failed to load messages.')
+          return
+        }
+        const messages: ChatMessage[] = ((data ?? []) as MessageRow[]).map((row) => ({
+          id: row.id,
+          conversationId: row.conversation_id,
+          senderId: row.sender_id,
+          body: row.body,
+          sentAt: row.created_at,
+        }))
+        setMessagesByConversation((prev) => ({ ...prev, [activeId]: messages }))
+        setLoadedConversations((prev) => new Set(prev).add(activeId))
+      })
+  }, [activeId, loadedConversations])
+
   useEffect(() => {
     if (activeId) {
       clearUnread(activeId)
+      markConversationRead(activeId)
     }
   }, [activeId, clearUnread])
 
-  function handleSend(newMessage: ChatMessage) {
-    // Immutable append — spread prev state to avoid mutation.
-    // The fallback `?? []` handles the edge case where the conversation
-    // has no messages yet (e.g. a new conversation with no history).
+  const handleRealtimeMessage = useCallback(
+    (msg: MessageRow) => {
+      const chatMessage: ChatMessage = {
+        id: msg.id,
+        conversationId: msg.conversation_id,
+        senderId: msg.sender_id,
+        body: msg.body,
+        sentAt: msg.created_at,
+      }
+
+      setMessagesByConversation((prev) => ({
+        ...prev,
+        [msg.conversation_id]: [
+          ...(prev[msg.conversation_id] ?? []),
+          chatMessage,
+        ],
+      }))
+
+      if (msg.conversation_id === activeId) {
+        markConversationRead(msg.conversation_id)
+      } else {
+        incrementUnread(msg.conversation_id)
+      }
+    },
+    [activeId, incrementUnread],
+  )
+
+  useRealtimeMessages({
+    currentUserId,
+    onNewMessage: handleRealtimeMessage,
+  })
+
+  async function handleSend(newMessage: ChatMessage) {
     setMessagesByConversation((prev) => ({
       ...prev,
       [newMessage.conversationId]: [
@@ -49,10 +114,25 @@ export default function MessagesView({ conversations, activeId }: MessagesViewPr
         newMessage,
       ],
     }))
+
+    const supabase = createSupabaseBrowserClient()
+    const { error } = await supabase.from('messages').insert({
+      conversation_id: newMessage.conversationId,
+      sender_id: currentUserId,
+      body: newMessage.body,
+    })
+
+    if (error) {
+      setMessagesByConversation((prev) => ({
+        ...prev,
+        [newMessage.conversationId]: (prev[newMessage.conversationId] ?? []).filter(
+          (m) => m.id !== newMessage.id,
+        ),
+      }))
+      toast.error('Failed to send message.')
+    }
   }
 
-  // Pushes /messages (no ?c= param) to close the active thread on mobile.
-  // On desktop the list stays visible regardless, so this is effectively a no-op.
   function handleBack() {
     router.push('/messages')
   }
@@ -60,14 +140,7 @@ export default function MessagesView({ conversations, activeId }: MessagesViewPr
   const messages = activeId ? (messagesByConversation[activeId] ?? []) : []
 
   return (
-    // Height calculation:
-    // - Mobile: subtract the fixed tab bar height (80px matches pb-20 in (app)/layout.tsx)
-    // - Desktop: full viewport height (sidebar is sticky, no tab bar)
     <div className="flex h-[calc(100dvh-80px)] overflow-hidden md:h-screen">
-      {/* Conversation list:
-          - Mobile with active thread: hidden (thread takes full screen)
-          - Mobile without active thread: full width
-          - Desktop: always visible as a fixed-width sidebar */}
       <div className={`${activeId ? 'hidden md:flex' : 'flex'} w-full md:w-auto`}>
         <ConversationList
           conversations={conversations}
@@ -76,14 +149,12 @@ export default function MessagesView({ conversations, activeId }: MessagesViewPr
         />
       </div>
 
-      {/* Thread or empty state:
-          When activeConversation is null on desktop, EmptyThread shows a placeholder.
-          EmptyThread is hidden on mobile (nothing to fill the space). */}
       {activeConversation ? (
         <div className={`${activeId ? 'flex' : 'hidden md:flex'} flex-1 flex-col overflow-hidden`}>
           <MessageThread
             conversation={activeConversation}
             messages={messages}
+            currentUserId={currentUserId}
             onSend={handleSend}
             onBack={handleBack}
           />

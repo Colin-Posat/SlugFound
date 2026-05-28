@@ -62,7 +62,7 @@ export type Profile = {
   updated_at: string
 }
 
-// ─── Messaging (still mock for Sprint 2 — see /app/lib/mock-messages.ts) ────
+// ─── Messaging (UI-facing shapes) ──────────────────────────────────────────
 
 export type MessageUser = {
   id: string
@@ -91,7 +91,26 @@ export type Conversation = {
   unreadCount: number
 }
 
-export const CURRENT_USER_ID = 'me'
+// ─── Messaging (DB row shapes — match supabase/migrations/0006) ────────────
+
+export type ConversationRow = {
+  id: string
+  item_id: string
+  user_a: string
+  user_b: string
+  user_a_last_read_at: string
+  user_b_last_read_at: string
+  created_at: string
+  updated_at: string
+}
+
+export type MessageRow = {
+  id: string
+  conversation_id: string
+  sender_id: string
+  body: string
+  created_at: string
+}
 
 // ─── Campus locations (used by Create form + filters) ───────────────────────
 

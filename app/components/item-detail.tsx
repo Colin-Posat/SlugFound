@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import Badge, { type BadgeVariant } from '@/app/components/ui/badge'
 import { initialFromName, timeAgo } from '@/app/lib/format'
 import { updateItemStatus } from '@/app/actions/items'
+import { findOrCreateConversation } from '@/app/actions/messages'
 import type { Item, ItemStatus } from '@/app/lib/definitions'
 import LocationMapPicker from '@/app/components/location-map-picker-dynamic'
 
@@ -169,14 +170,22 @@ export default function ItemDetail({ item, isOwner }: ItemDetailProps) {
             )}
           </>
         ) : (
-          // Non-owner — placeholder until messaging is wired to Supabase
           <button
             type="button"
-            disabled
-            title="Messaging is coming in a future sprint"
-            className="flex-1 cursor-not-allowed rounded-full bg-yellow-400/40 py-2.5 text-sm font-bold text-zinc-950/60"
+            disabled={isPending}
+            onClick={() => {
+              startTransition(async () => {
+                const result = await findOrCreateConversation(item.id)
+                if ('error' in result) {
+                  toast.error(result.error)
+                  return
+                }
+                router.push(`/messages?c=${result.conversationId}`)
+              })
+            }}
+            className="flex-1 rounded-full bg-yellow-400 py-2.5 text-sm font-bold text-zinc-950 transition hover:bg-yellow-300 disabled:opacity-50"
           >
-            💬 Message {posterName.split(' ')[0]} (coming soon)
+            {isPending ? 'Opening chat…' : `💬 Message ${posterName.split(' ')[0]}`}
           </button>
         )}
       </div>

@@ -22,6 +22,27 @@ export function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+/**
+ * Format an ISO timestamp for message display.
+ * Today → "10:12 AM", yesterday → "Yesterday", older → "May 12".
+ */
+export function formatMessageTime(iso: string): string {
+  const date = new Date(iso)
+  if (isNaN(date.getTime())) return ''
+
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterdayStart = new Date(todayStart.getTime() - 86_400_000)
+
+  if (date.getTime() >= todayStart.getTime()) {
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
+  if (date.getTime() >= yesterdayStart.getTime()) {
+    return 'Yesterday'
+  }
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 /** "Cowell College" → "C", "Sam Slug" → "S". Always uppercase. */
 export function initialFromName(name: string | null | undefined): string {
   if (!name) return '?'

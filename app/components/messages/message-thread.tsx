@@ -2,13 +2,13 @@
 
 import { useEffect, useRef } from 'react'
 import type { Conversation, ChatMessage } from '@/app/lib/definitions'
-import { CURRENT_USER_ID } from '@/app/lib/definitions'
 import MessageBubble from './message-bubble'
 import MessageComposer from './message-composer'
 
 interface MessageThreadProps {
   conversation: Conversation
   messages: readonly ChatMessage[]
+  currentUserId: string
   onSend: (message: ChatMessage) => void
   onBack: () => void
 }
@@ -16,6 +16,7 @@ interface MessageThreadProps {
 export default function MessageThread({
   conversation,
   messages,
+  currentUserId,
   onSend,
   onBack,
 }: MessageThreadProps) {
@@ -70,14 +71,14 @@ export default function MessageThread({
           <MessageBubble
             key={message.id}
             message={message}
-            isOwn={message.senderId === CURRENT_USER_ID}
+            isOwn={message.senderId === currentUserId}
           />
         ))}
         <div ref={bottomRef} />
       </div>
 
       {/* Composer */}
-      <MessageComposer conversationId={conversation.id} onSend={onSend} />
+      <MessageComposer conversationId={conversation.id} currentUserId={currentUserId} onSend={onSend} />
     </div>
   )
 }

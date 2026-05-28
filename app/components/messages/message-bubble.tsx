@@ -1,4 +1,5 @@
 import type { ChatMessage } from '@/app/lib/definitions'
+import { formatMessageTime } from '@/app/lib/format'
 
 interface MessageBubbleProps {
   message: ChatMessage
@@ -21,7 +22,7 @@ export default function MessageBubble({ message, isOwn }: MessageBubbleProps) {
         <span
           className={`text-[10px] text-zinc-600 ${isOwn ? 'text-right' : 'text-left'}`}
         >
-          {message.sentAt}
+          {formatMessageTime(message.sentAt)}
         </span>
       </div>
     </div>

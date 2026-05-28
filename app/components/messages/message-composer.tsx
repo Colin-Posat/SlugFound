@@ -2,14 +2,14 @@
 
 import { useState, type KeyboardEvent } from 'react'
 import type { ChatMessage } from '@/app/lib/definitions'
-import { CURRENT_USER_ID } from '@/app/lib/definitions'
 
 interface MessageComposerProps {
   conversationId: string
+  currentUserId: string
   onSend: (message: ChatMessage) => void
 }
 
-export default function MessageComposer({ conversationId, onSend }: MessageComposerProps) {
+export default function MessageComposer({ conversationId, currentUserId, onSend }: MessageComposerProps) {
   const [draft, setDraft] = useState('')
 
   function handleSend() {
@@ -19,12 +19,9 @@ export default function MessageComposer({ conversationId, onSend }: MessageCompo
     const newMessage: ChatMessage = {
       id: crypto.randomUUID(),
       conversationId,
-      senderId: CURRENT_USER_ID,
+      senderId: currentUserId,
       body: trimmed,
-      sentAt: new Date().toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-      }),
+      sentAt: new Date().toISOString(),
     }
 
     onSend(newMessage)

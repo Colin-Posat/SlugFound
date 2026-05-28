@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { Conversation } from '@/app/lib/definitions'
+import { timeAgo } from '@/app/lib/format'
 
 interface ConversationListItemProps {
   conversation: Conversation
@@ -37,7 +38,7 @@ export default function ConversationListItem({
             {conversation.otherUser.name}
           </span>
           <span className="shrink-0 text-[10px] text-zinc-500">
-            {conversation.lastMessageAt}
+            {timeAgo(conversation.lastMessageAt)}
           </span>
         </div>
         <div className="mt-0.5 flex items-center gap-1.5">
