@@ -1,11 +1,11 @@
 /**
- * AI photo scan endpoint — US 3.3.
+ * AI photo scan endpoint — uses Groq vision API.
  *
  * Request body:  { image: string (base64, no data: prefix), mimeType: string }
  * Response:      { title, category, description }
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import Groq from 'groq-sdk'
 import { ITEM_CATEGORIES } from '@/app/lib/definitions'
 
 const TITLE_MAX = 80
@@ -30,31 +30,43 @@ export async function POST(request: Request) {
     return Response.json({ error: 'No image provided.' }, { status: 400 })
   }
 
+  const prompt =
+    `You are analyzing a photo of a found item for a university lost-and-found app. ` +
+    `Respond ONLY with a valid JSON object and nothing else — no markdown, no backticks, no explanation. ` +
+    `The JSON must have exactly these fields: { title: string (max ${TITLE_MAX} chars, concise name of the item), ` +
+    `category: string (must be exactly one of: ${ITEM_CATEGORIES.map((c) => `"${c}"`).join(', ')}), ` +
+    `description: string (max ${DESCRIPTION_MAX} chars, describe visible details like color, brand, condition, distinguishing features) }`
+
   try {
-    const apiKey = process.env.GEMINI_API_KEY ?? ''
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
-    const prompt =
-      `You are analyzing a photo of a found item for a university lost-and-found app. ` +
-      `Respond ONLY with a valid JSON object and nothing else — no markdown, no backticks, no explanation. ` +
-      `The JSON must have exactly these fields: { title: string (max ${TITLE_MAX} chars, concise name of the item), ` +
-      `category: string (must be exactly one of: ${ITEM_CATEGORIES.map((c) => `"${c}"`).join(', ')}), ` +
-      `description: string (max ${DESCRIPTION_MAX} chars, describe visible details like color, brand, condition, distinguishing features) }. ` +
-      `Do not include suggested_type.`
+    const completion = await groq.chat.completions.create({
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image_url',
+              image_url: { url: `data:${mimeType ?? 'image/jpeg'};base64,${image}` },
+            },
+            { type: 'text', text: prompt },
+          ],
+        },
+      ],
+    })
 
-    const result = await model.generateContent([
-      { text: prompt },
-      { inlineData: { data: image, mimeType: mimeType || 'image/jpeg' } },
-    ])
+    const raw = (completion.choices[0]?.message?.content ?? '').trim()
+
+    // Strip accidental code-fence wrapping in case the model adds it anyway
+    const fenceStripped = raw.startsWith('```')
+      ? raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
+      : raw
+    const jsonMatch = fenceStripped.match(/\{[\s\S]*\}/)
+    const cleaned = jsonMatch ? jsonMatch[0] : fenceStripped
 
     let parsed: Record<string, unknown>
     try {
-      const raw = result.response.text().trim()
-      // Strip accidental code-fence wrapping
-      const cleaned = raw.startsWith('```')
-        ? raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
-        : raw
       parsed = JSON.parse(cleaned)
     } catch {
       return Response.json({ error: 'AI service unavailable' }, { status: 500 })
@@ -70,7 +82,8 @@ export async function POST(request: Request) {
       category,
       description: clamp(parsed.description, DESCRIPTION_MAX),
     })
-  } catch {
+  } catch (err) {
+    console.error('[scan-item] Groq error:', err)
     return Response.json({ error: 'AI service unavailable' }, { status: 500 })
   }
 }
