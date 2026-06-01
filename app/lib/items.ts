@@ -20,6 +20,7 @@ export interface ListItemsOptions {
   search?: string
   category?: string  // 'All' or undefined → no filter
   location?: string  // empty string or undefined → no filter
+  activeOnly?: boolean // when true, hide claimed/resolved items (US 4.3)
   limit?: number
 }
 
@@ -27,18 +28,28 @@ export interface ListItemsOptions {
  * Fetch items of a given type (lost/found) with optional filters.
  *
  * Joins `profiles` so each item carries the poster's display_name + avatar
- * for rendering on listing cards. Sorted by created_at desc (newest first).
+ * for rendering on listing cards.
+ *
+ * Ordering (US 4.3): active items first, then claimed/resolved. We rely on the
+ * `item_status` enum being defined as ('active','claimed','resolved') — ascending
+ * enum order is exactly active → claimed → resolved. Within each group, newest
+ * first by created_at.
  */
 export async function listItems(opts: ListItemsOptions): Promise<Item[]> {
-  const { type, search, category, location, limit = 100 } = opts
+  const { type, search, category, location, activeOnly, limit = 100 } = opts
   const supabase = await createSupabaseServerClient()
 
   let query = supabase
     .from('items')
     .select('*, profile:profiles(id, display_name, avatar_url)')
     .eq('type', type)
+    .order('status', { ascending: true })
     .order('created_at', { ascending: false })
     .limit(limit)
+
+  if (activeOnly) {
+    query = query.eq('status', 'active')
+  }
 
   // Search across title + description using Postgres ILIKE (case-insensitive).
   // The `or` filter format is: 'col1.ilike.%term%,col2.ilike.%term%'.

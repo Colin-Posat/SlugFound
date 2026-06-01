@@ -55,6 +55,7 @@ interface ItemsFilterProps {
   initialSearch: string
   initialCategory: string
   initialLocation: string
+  initialShowAll: boolean          // false → "Active only" (default)
 }
 
 export default function ItemsFilter({
@@ -64,6 +65,7 @@ export default function ItemsFilter({
   initialSearch,
   initialCategory,
   initialLocation,
+  initialShowAll,
 }: ItemsFilterProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -76,16 +78,23 @@ export default function ItemsFilter({
   const [search, setSearch] = useState(initialSearch)
   const [activeCategory, setActiveCategory] = useState(initialCategory || 'All')
   const [activeLocation, setActiveLocation] = useState(initialLocation)
+  const [showAll, setShowAll] = useState(initialShowAll)
 
   /**
    * Push new searchParams to the URL. Only includes keys with truthy values
    * so the URL stays clean (e.g. /lost instead of /lost?q=&category=All).
    */
-  const updateUrl = (next: { q?: string; category?: string; location?: string }) => {
+  const updateUrl = (next: {
+    q?: string
+    category?: string
+    location?: string
+    all?: boolean
+  }) => {
     const params = new URLSearchParams()
     if (next.q && next.q.trim()) params.set('q', next.q.trim())
     if (next.category && next.category !== 'All') params.set('category', next.category)
     if (next.location) params.set('location', next.location)
+    if (next.all) params.set('all', '1')
 
     const qs = params.toString()
     const url = qs ? `${pathname}?${qs}` : pathname
@@ -100,7 +109,7 @@ export default function ItemsFilter({
       // Only fire if the search value actually differs from the URL — avoids
       // an extra round-trip on initial mount.
       if (search !== initialSearch) {
-        updateUrl({ q: search, category: activeCategory, location: activeLocation })
+        updateUrl({ q: search, category: activeCategory, location: activeLocation, all: showAll })
       }
     }, 300)
     return () => {
@@ -111,23 +120,31 @@ export default function ItemsFilter({
 
   function handleCategoryClick(cat: string) {
     setActiveCategory(cat)
-    updateUrl({ q: search, category: cat, location: activeLocation })
+    updateUrl({ q: search, category: cat, location: activeLocation, all: showAll })
   }
 
   function handleLocationChange(loc: string) {
     setActiveLocation(loc)
-    updateUrl({ q: search, category: activeCategory, location: loc })
+    updateUrl({ q: search, category: activeCategory, location: loc, all: showAll })
+  }
+
+  function handleToggleActiveOnly() {
+    // Checkbox is "Active only", so toggling it flips showAll.
+    const nextShowAll = !showAll
+    setShowAll(nextShowAll)
+    updateUrl({ q: search, category: activeCategory, location: activeLocation, all: nextShowAll })
   }
 
   function clearFilters() {
     setSearch('')
     setActiveCategory('All')
     setActiveLocation('')
+    setShowAll(false)
     startTransition(() => router.replace(pathname, { scroll: false }))
   }
 
   const hasActiveFilters =
-    search !== '' || activeCategory !== 'All' || activeLocation !== ''
+    search !== '' || activeCategory !== 'All' || activeLocation !== '' || showAll
 
   return (
     <>
@@ -152,6 +169,16 @@ export default function ItemsFilter({
             </option>
           ))}
         </select>
+        {/* Active-only toggle (default on) — hides claimed/resolved items (US 4.3) */}
+        <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-300 transition-colors hover:border-zinc-500">
+          <input
+            type="checkbox"
+            checked={!showAll}
+            onChange={handleToggleActiveOnly}
+            className="accent-yellow-400"
+          />
+          Active only
+        </label>
       </div>
 
       {/* Category pills */}

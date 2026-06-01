@@ -17,6 +17,7 @@ import Badge, { type BadgeVariant } from '@/app/components/ui/badge'
 import { initialFromName, timeAgo } from '@/app/lib/format'
 import { updateItemStatus } from '@/app/actions/items'
 import { findOrCreateConversation } from '@/app/actions/messages'
+import { nextStatuses } from '@/app/lib/item-status'
 import type { Item, ItemStatus } from '@/app/lib/definitions'
 import LocationMapPicker from '@/app/components/location-map-picker-dynamic'
 
@@ -33,6 +34,9 @@ export default function ItemDetail({ item, isOwner }: ItemDetailProps) {
   // marks resolved/claimed without waiting for a full page revalidation.
   const [status, setStatus] = useState<ItemStatus>(item.status)
 
+  // Owner-only transitions allowed from the current status (US 4.3).
+  const allowedStatuses = nextStatuses(status)
+
   const posterName = item.profile?.display_name ?? 'Anonymous'
   const posterInitial = initialFromName(posterName)
   const backHref = item.type === 'lost' ? '/lost' : '/found'
@@ -46,11 +50,7 @@ export default function ItemDetail({ item, isOwner }: ItemDetailProps) {
       }
       setStatus(nextStatus)
       toast.success(
-        nextStatus === 'resolved'
-          ? 'Marked as resolved 🎉'
-          : nextStatus === 'claimed'
-            ? 'Marked as claimed'
-            : 'Reopened',
+        nextStatus === 'resolved' ? 'Marked as resolved 🎉' : 'Marked as claimed',
       )
       router.refresh()
     })
@@ -137,7 +137,8 @@ export default function ItemDetail({ item, isOwner }: ItemDetailProps) {
       {/* Action buttons */}
       <div className="flex flex-wrap gap-3">
         {isOwner ? (
-          // Owner controls
+          // Owner controls — transitions follow nextStatuses() (US 4.3).
+          // Once resolved, no transition buttons render (terminal state).
           <>
             <Link
               href={`/items/${item.id}/edit`}
@@ -145,34 +146,30 @@ export default function ItemDetail({ item, isOwner }: ItemDetailProps) {
             >
               Edit post
             </Link>
-            {status === 'active' ? (
-              <>
-                <button
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => handleMarkStatus('resolved')}
-                  className="flex-1 rounded-full bg-yellow-400 py-2.5 text-sm font-bold text-zinc-950 transition hover:bg-yellow-300 disabled:opacity-50"
-                >
-                  {isPending ? 'Updating…' : 'Mark as resolved'}
-                </button>
-                <button
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => handleMarkStatus('claimed')}
-                  className="rounded-full border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-white disabled:opacity-50"
-                >
-                  Mark as claimed
-                </button>
-              </>
-            ) : (
+            {allowedStatuses.includes('claimed') && (
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() => handleMarkStatus('active')}
+                onClick={() => handleMarkStatus('claimed')}
                 className="rounded-full border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-white disabled:opacity-50"
               >
-                {isPending ? 'Updating…' : 'Reopen as active'}
+                {isPending ? 'Updating…' : 'Mark as claimed'}
               </button>
+            )}
+            {allowedStatuses.includes('resolved') && (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => handleMarkStatus('resolved')}
+                className="flex-1 rounded-full bg-yellow-400 py-2.5 text-sm font-bold text-zinc-950 transition hover:bg-yellow-300 disabled:opacity-50"
+              >
+                {isPending ? 'Updating…' : 'Mark as resolved'}
+              </button>
+            )}
+            {status === 'resolved' && (
+              <span className="flex-1 rounded-full border border-yellow-400/20 bg-yellow-400/5 py-2.5 text-center text-sm font-semibold text-yellow-400">
+                ✅ Resolved
+              </span>
             )}
           </>
         ) : (

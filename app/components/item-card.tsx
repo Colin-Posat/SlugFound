@@ -2,18 +2,24 @@ import Link from 'next/link'
 import type { Item } from '@/app/lib/definitions'
 import Badge from '@/app/components/ui/badge'
 import { timeAgo } from '@/app/lib/format'
+import { isReunited } from '@/app/lib/item-status'
 
 /**
  * Listing card. Renders either the uploaded image (if image_url is set) or
  * a large emoji placeholder. Shows the poster's display name when joined.
+ *
+ * Claimed/resolved items are visually muted and carry a status badge (US 4.3).
  */
 export default function ItemCard({ item }: { item: Item }) {
   const posterName = item.profile?.display_name ?? 'Anonymous'
+  const reunited = isReunited(item.status)
 
   return (
     <Link
       href={`/items/${item.id}`}
-      className="group flex flex-col rounded-2xl border border-zinc-800 bg-zinc-900 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-zinc-600 hover:shadow-lg hover:shadow-black/30"
+      className={`group flex flex-col rounded-2xl border border-zinc-800 bg-zinc-900 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-zinc-600 hover:shadow-lg hover:shadow-black/30 ${
+        reunited ? 'opacity-60' : ''
+      }`}
     >
       {/* Image or emoji placeholder */}
       <div className="mb-4 flex h-36 items-center justify-center overflow-hidden rounded-xl bg-zinc-800">
@@ -22,16 +28,17 @@ export default function ItemCard({ item }: { item: Item }) {
           <img
             src={item.image_url}
             alt={item.title}
-            className="h-full w-full object-cover"
+            className={`h-full w-full object-cover ${reunited ? 'grayscale' : ''}`}
           />
         ) : (
-          <span className="text-5xl">{item.emoji ?? '📦'}</span>
+          <span className={`text-5xl ${reunited ? 'grayscale' : ''}`}>{item.emoji ?? '📦'}</span>
         )}
       </div>
 
       {/* Badges */}
       <div className="flex items-center gap-2">
         <Badge variant={item.type}>{item.type}</Badge>
+        {reunited && <Badge variant={item.status}>{item.status}</Badge>}
         <span className="rounded-full border border-zinc-700 px-2.5 py-0.5 text-xs text-zinc-400">
           {item.category}
         </span>

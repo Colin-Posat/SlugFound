@@ -12,17 +12,20 @@ import { listItems } from '@/app/lib/items'
  */
 type PageProps = {
   // Next.js 16: searchParams is a Promise — must await.
-  searchParams: Promise<{ q?: string; category?: string; location?: string }>
+  searchParams: Promise<{ q?: string; category?: string; location?: string; all?: string }>
 }
 
 export default async function LostPage({ searchParams }: PageProps) {
-  const { q = '', category = '', location = '' } = await searchParams
+  const { q = '', category = '', location = '', all } = await searchParams
+  // "Active only" is the default; ?all=1 shows claimed/resolved too (US 4.3).
+  const showAll = all === '1'
 
   const items = await listItems({
     type: 'lost',
     search: q,
     category: category || undefined,
     location: location || undefined,
+    activeOnly: !showAll,
   })
 
   return (
@@ -49,6 +52,7 @@ export default async function LostPage({ searchParams }: PageProps) {
         initialSearch={q}
         initialCategory={category}
         initialLocation={location}
+        initialShowAll={showAll}
       />
     </div>
   )
