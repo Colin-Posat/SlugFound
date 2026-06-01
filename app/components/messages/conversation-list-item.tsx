@@ -23,13 +23,24 @@ export default function ConversationListItem({
       }`}
     >
       {/* Avatar */}
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-sm font-bold text-white ${
-          unreadCount > 0 ? 'ring-2 ring-yellow-400' : ''
-        }`}
-      >
-        {conversation.otherUser.initial}
-      </div>
+      {conversation.otherUser.avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={conversation.otherUser.avatarUrl}
+          alt={conversation.otherUser.name}
+          className={`h-10 w-10 shrink-0 rounded-full object-cover ${
+            unreadCount > 0 ? 'ring-2 ring-yellow-400' : ''
+          }`}
+        />
+      ) : (
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-sm font-bold text-white ${
+            unreadCount > 0 ? 'ring-2 ring-yellow-400' : ''
+          }`}
+        >
+          {conversation.otherUser.initial}
+        </div>
+      )}
 
       {/* Content */}
       <div className="min-w-0 flex-1">

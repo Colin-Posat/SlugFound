@@ -1,12 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { logout } from '@/app/actions/auth'
+import { useAuth } from '@/app/lib/auth-context'
+import { updateProfile } from '@/app/actions/profile'
 import Badge, { type BadgeVariant } from '@/app/components/ui/badge'
 import { initialFromName, timeAgo } from '@/app/lib/format'
 import type { Profile, Item } from '@/app/lib/definitions'
 import type { UserItemStats } from '@/app/lib/items'
+
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024
+const ALLOWED_AVATAR_MIME = ['image/jpeg', 'image/png', 'image/webp']
 
 type Tab = 'listings' | 'saved' | 'settings'
 
@@ -40,13 +46,60 @@ interface ProfileViewProps {
  * Tab state is local — saved/settings are mock for Sprint 2 and don't persist.
  */
 export default function ProfileView({ profile, email, stats, listings }: ProfileViewProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('listings')
+  // Prefer the AuthContext profile so the header reflects edits immediately
+  // after refreshProfile(); fall back to the server-provided prop on first paint.
+  const { profile: ctxProfile, refreshProfile } = useAuth()
+  const liveProfile = ctxProfile ?? profile
 
-  const displayName = profile?.display_name ?? email.split('@')[0]
+  const [activeTab, setActiveTab] = useState<Tab>('listings')
+  const [isEditing, setIsEditing] = useState(false)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [errors, setErrors] = useState<{ display_name?: string[]; avatar?: string[] }>()
+  const [pending, startTransition] = useTransition()
+
+  // Handle submit via a transition so success/error handling (and the state
+  // updates that close the form) live in an event callback, not an effect.
+  function handleProfileSubmit(formData: FormData) {
+    startTransition(async () => {
+      const result = await updateProfile(undefined, formData)
+      if (result?.success) {
+        toast.success('Profile updated')
+        await refreshProfile()
+        setIsEditing(false)
+        setAvatarFile(null)
+        setErrors(undefined)
+      } else if (result?.errors) {
+        setErrors(result.errors)
+      } else if (result?.message) {
+        toast.error(result.message)
+      }
+    })
+  }
+
+  const displayName = liveProfile?.display_name ?? email.split('@')[0]
   const initial = initialFromName(displayName)
-  const memberSince = profile?.created_at
-    ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  const avatarUrl = liveProfile?.avatar_url ?? null
+  const memberSince = liveProfile?.created_at
+    ? new Date(liveProfile.created_at).toLocaleDateString('en-US', {
+        month: 'long',
+        year: 'numeric',
+      })
     : 'recently'
+
+  function handleAvatarSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    if (file && file.size > MAX_AVATAR_BYTES) {
+      toast.error('Image must be 2 MB or smaller')
+      e.target.value = ''
+      return
+    }
+    if (file && !ALLOWED_AVATAR_MIME.includes(file.type)) {
+      toast.error('Image must be JPG, PNG, or WebP')
+      e.target.value = ''
+      return
+    }
+    setAvatarFile(file)
+  }
 
   const statCards = [
     { label: 'Posts', value: stats.totalPosts.toString() },
@@ -58,24 +111,114 @@ export default function ProfileView({ profile, email, stats, listings }: Profile
     <div className="mx-auto w-full max-w-4xl px-4 py-10">
       {/* Profile header */}
       <div className="mb-10 flex flex-col items-start gap-6 sm:flex-row sm:items-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-yellow-400 text-3xl font-bold text-zinc-950">
-          {initial}
-        </div>
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarUrl}
+            alt={displayName}
+            className="h-20 w-20 rounded-full object-cover"
+          />
+        ) : (
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-yellow-400 text-3xl font-bold text-zinc-950">
+            {initial}
+          </div>
+        )}
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-white">{displayName}</h1>
           <p className="text-sm text-zinc-400">{email}</p>
           <p className="mt-1 text-xs text-zinc-600">
             Member since {memberSince}
-            {profile?.college ? ` · ${profile.college}` : ''}
+            {liveProfile?.college ? ` · ${liveProfile.college}` : ''}
           </p>
         </div>
         <button
           type="button"
+          onClick={() => setIsEditing((v) => !v)}
           className="rounded-full border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-white"
         >
-          Edit profile
+          {isEditing ? 'Close' : 'Edit profile'}
         </button>
       </div>
+
+      {/* Inline edit form (US 4.5) */}
+      {isEditing && (
+        <form
+          action={handleProfileSubmit}
+          className="mb-10 flex flex-col gap-5 rounded-2xl border border-zinc-800 bg-zinc-900 p-6"
+        >
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="display_name" className="text-sm font-medium text-zinc-300">
+              Display name
+            </label>
+            <input
+              id="display_name"
+              name="display_name"
+              type="text"
+              required
+              maxLength={40}
+              defaultValue={liveProfile?.display_name ?? ''}
+              className="rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none transition focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400"
+            />
+            {errors?.display_name && (
+              <p className="text-xs text-red-400">{errors.display_name[0]}</p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-zinc-300">Profile photo</label>
+            <div className="flex items-center gap-4">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  className="h-14 w-14 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-yellow-400 text-xl font-bold text-zinc-950">
+                  {initial}
+                </div>
+              )}
+              <label
+                htmlFor="avatar"
+                className="cursor-pointer rounded-full border border-zinc-700 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-500 hover:text-white"
+              >
+                Choose photo
+              </label>
+            </div>
+            <input
+              id="avatar"
+              name="avatar"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              onChange={handleAvatarSelect}
+            />
+            {avatarFile && <p className="text-xs text-zinc-500">{avatarFile.name}</p>}
+            {errors?.avatar && (
+              <p className="text-xs text-red-400">{errors.avatar[0]}</p>
+            )}
+            <p className="text-xs text-zinc-600">JPG, PNG, or WebP. Max 2 MB.</p>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              disabled={pending}
+              className="flex items-center justify-center gap-2 rounded-full bg-yellow-400 px-6 py-2.5 text-sm font-bold text-zinc-950 transition hover:bg-yellow-300 disabled:opacity-50"
+            >
+              {pending ? 'Saving…' : 'Save profile'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="rounded-full border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-400 transition hover:border-zinc-500 hover:text-white"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Stats — derived from items table */}
       <div className="mb-10 grid grid-cols-3 gap-4">

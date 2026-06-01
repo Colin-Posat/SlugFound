@@ -68,6 +68,7 @@ export type MessageUser = {
   id: string
   name: string
   initial: string
+  avatarUrl?: string
   college?: string
 }
 

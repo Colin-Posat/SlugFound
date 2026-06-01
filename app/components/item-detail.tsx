@@ -123,9 +123,18 @@ export default function ItemDetail({ item, isOwner }: ItemDetailProps) {
 
       {/* Poster card */}
       <div className="mb-8 flex items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-yellow-400 text-lg font-bold text-zinc-950">
-          {posterInitial}
-        </div>
+        {item.profile?.avatar_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={item.profile.avatar_url}
+            alt={posterName}
+            className="h-12 w-12 shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-yellow-400 text-lg font-bold text-zinc-950">
+            {posterInitial}
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <p className="text-xs uppercase tracking-wide text-zinc-600">
             {item.type === 'lost' ? 'Lost by' : 'Found by'}

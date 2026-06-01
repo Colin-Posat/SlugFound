@@ -63,6 +63,13 @@ describe('toConversation', () => {
     expect(result.otherUser.name).toBe('Jordan Kim')
     expect(result.otherUser.initial).toBe('J')
     expect(result.otherUser.college).toBe('Stevenson')
+    expect(result.otherUser.avatarUrl).toBeUndefined()
+  })
+
+  it('maps the other user avatar_url when present', () => {
+    const withAvatar = { ...otherProfile, avatar_url: 'https://x.supabase.co/a.png' }
+    const result = toConversation(convRow, 'aaa-aaa', withAvatar, item, lastMessage, 0)
+    expect(result.otherUser.avatarUrl).toBe('https://x.supabase.co/a.png')
   })
 
   it('uses the item fields', () => {

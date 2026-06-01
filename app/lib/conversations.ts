@@ -36,6 +36,7 @@ export function toConversation(
     id: otherProfile.id,
     name: otherProfile.display_name,
     initial: initialFromName(otherProfile.display_name),
+    avatarUrl: otherProfile.avatar_url ?? undefined,
     college: otherProfile.college ?? undefined,
   }
 

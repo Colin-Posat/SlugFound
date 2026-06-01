@@ -62,9 +62,18 @@ export default function Sidebar() {
               href="/profile"
               className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-zinc-900"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-yellow-400 text-sm font-bold text-zinc-950">
-                {initial}
-              </div>
+              {profile?.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profile.avatar_url}
+                  alt={name}
+                  className="h-9 w-9 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-yellow-400 text-sm font-bold text-zinc-950">
+                  {initial}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-white">{name}</p>
                 <p className="truncate text-[11px] text-zinc-500">{user.email}</p>

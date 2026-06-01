@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { Item } from '@/app/lib/definitions'
 import Badge from '@/app/components/ui/badge'
-import { timeAgo } from '@/app/lib/format'
+import { timeAgo, initialFromName } from '@/app/lib/format'
 import { isReunited } from '@/app/lib/item-status'
 
 /**
@@ -56,8 +56,22 @@ export default function ItemCard({ item }: { item: Item }) {
         <span className="shrink-0">{timeAgo(item.created_at)}</span>
       </div>
 
-      <div className="mt-2 text-[11px] text-zinc-600">
-        Posted by <span className="text-zinc-500">{posterName}</span>
+      <div className="mt-2 flex items-center gap-1.5 text-[11px] text-zinc-600">
+        {item.profile?.avatar_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={item.profile.avatar_url}
+            alt={posterName}
+            className="h-5 w-5 rounded-full object-cover"
+          />
+        ) : (
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-yellow-400 text-[9px] font-bold text-zinc-950">
+            {initialFromName(posterName)}
+          </span>
+        )}
+        <span>
+          Posted by <span className="text-zinc-500">{posterName}</span>
+        </span>
       </div>
     </Link>
   )
