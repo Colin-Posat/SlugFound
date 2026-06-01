@@ -17,6 +17,8 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import ItemCard from '@/app/components/item-card'
+import ItemsMapDynamic from '@/app/components/items-map-dynamic'
+import { geotaggedItems } from '@/app/lib/geo'
 import type { Item } from '@/app/lib/definitions'
 
 const CATEGORIES = [
@@ -79,6 +81,7 @@ export default function ItemsFilter({
   const [activeCategory, setActiveCategory] = useState(initialCategory || 'All')
   const [activeLocation, setActiveLocation] = useState(initialLocation)
   const [showAll, setShowAll] = useState(initialShowAll)
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
 
   /**
    * Push new searchParams to the URL. Only includes keys with truthy values
@@ -216,8 +219,46 @@ export default function ItemsFilter({
         </div>
       )}
 
-      {/* Empty state */}
-      {items.length === 0 ? (
+      {/* View toggle + (map) geotag info bar */}
+      <div className="mb-4 flex items-center justify-between gap-3">
+        {viewMode === 'map' ? (
+          <p className="text-sm text-zinc-500">
+            Showing {geotaggedItems(items).length} of {items.length}{' '}
+            {items.length === 1 ? 'item' : 'items'} on the map
+          </p>
+        ) : (
+          <span />
+        )}
+        <div className="flex shrink-0 rounded-xl border border-zinc-700 bg-zinc-900 p-1">
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+              viewMode === 'list'
+                ? 'bg-zinc-800 text-white'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            List
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('map')}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+              viewMode === 'map'
+                ? 'bg-zinc-800 text-white'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            Map
+          </button>
+        </div>
+      </div>
+
+      {/* Content: map, empty state, or grid */}
+      {viewMode === 'map' ? (
+        <ItemsMapDynamic items={items} />
+      ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-zinc-800 py-20 text-center">
           <span className="text-5xl">🔍</span>
           <p className="text-base font-semibold text-white">
