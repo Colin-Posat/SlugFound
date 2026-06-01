@@ -59,6 +59,7 @@ export type Profile = {
   email: string
   avatar_url: string | null
   college: string | null
+  email_notifications: boolean
   created_at: string
   updated_at: string
 }

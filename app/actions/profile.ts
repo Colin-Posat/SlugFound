@@ -101,3 +101,32 @@ export async function updateProfile(
 
   return { success: true }
 }
+
+/**
+ * Toggle the new-message email notification preference (US 4.4).
+ * Returns `{ error }` on failure so the client can revert its optimistic state.
+ */
+export async function updateEmailNotifications(
+  enabled: boolean,
+): Promise<{ error?: string }> {
+  const supabase = await createSupabaseServerClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'You must be signed in.' }
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ email_notifications: enabled })
+    .eq('id', user.id)
+
+  if (error) {
+    return { error: `Could not update preference: ${error.message}` }
+  }
+
+  revalidatePath('/profile')
+  return {}
+}

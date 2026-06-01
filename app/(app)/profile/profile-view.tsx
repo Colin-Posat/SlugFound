@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { logout } from '@/app/actions/auth'
 import { useAuth } from '@/app/lib/auth-context'
-import { updateProfile } from '@/app/actions/profile'
+import { updateProfile, updateEmailNotifications } from '@/app/actions/profile'
 import Badge, { type BadgeVariant } from '@/app/components/ui/badge'
 import { initialFromName, timeAgo } from '@/app/lib/format'
 import type { Profile, Item } from '@/app/lib/definitions'
@@ -15,12 +15,6 @@ const MAX_AVATAR_BYTES = 2 * 1024 * 1024
 const ALLOWED_AVATAR_MIME = ['image/jpeg', 'image/png', 'image/webp']
 
 type Tab = 'listings' | 'saved' | 'settings'
-
-const NOTIFICATION_PREFS = [
-  { id: 'notify-match', label: 'Email me when a found post matches my lost item' },
-  { id: 'notify-messages', label: 'Email me when I receive a new message' },
-  { id: 'notify-resolved', label: 'Email me when my listing is marked resolved' },
-]
 
 const COLLEGES = [
   'Cowell College',
@@ -56,6 +50,23 @@ export default function ProfileView({ profile, email, stats, listings }: Profile
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [errors, setErrors] = useState<{ display_name?: string[]; avatar?: string[] }>()
   const [pending, startTransition] = useTransition()
+  const [emailNotifications, setEmailNotifications] = useState(
+    liveProfile?.email_notifications ?? true,
+  )
+
+  function handleToggleEmailNotifications() {
+    const next = !emailNotifications
+    setEmailNotifications(next) // optimistic
+    startTransition(async () => {
+      const result = await updateEmailNotifications(next)
+      if (result.error) {
+        setEmailNotifications(!next) // revert on failure
+        toast.error(result.error)
+      } else {
+        toast.success(next ? 'Email notifications on' : 'Email notifications off')
+      }
+    })
+  }
 
   // Handle submit via a transition so success/error handling (and the state
   // updates that close the form) live in an event callback, not an effect.
@@ -352,33 +363,25 @@ export default function ProfileView({ profile, email, stats, listings }: Profile
           </div>
 
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-            <h3 className="mb-1 text-sm font-semibold text-white">Notifications</h3>
-            <p className="mb-4 text-xs text-zinc-500">Choose what triggers an email from us.</p>
-            <div className="flex flex-col gap-3">
-              {NOTIFICATION_PREFS.map((pref) => (
-                <label
-                  key={pref.id}
-                  htmlFor={pref.id}
-                  className="flex cursor-pointer items-center gap-3"
-                >
-                  <input
-                    id={pref.id}
-                    type="checkbox"
-                    defaultChecked
-                    className="accent-yellow-400"
-                  />
-                  <span className="text-sm text-zinc-400">{pref.label}</span>
-                </label>
-              ))}
-            </div>
+            <h3 className="mb-1 text-sm font-semibold text-white">Notification preferences</h3>
+            <p className="mb-4 text-xs text-zinc-500">Manage the emails SlugFound sends you.</p>
+            <label
+              htmlFor="email-notifications"
+              className="flex cursor-pointer items-center gap-3"
+            >
+              <input
+                id="email-notifications"
+                type="checkbox"
+                checked={emailNotifications}
+                onChange={handleToggleEmailNotifications}
+                className="accent-yellow-400"
+              />
+              <span className="text-sm text-zinc-400">
+                Email me when I receive a new message
+              </span>
+            </label>
+            <p className="mt-3 text-xs text-zinc-600">Changes save automatically.</p>
           </div>
-
-          <button
-            type="button"
-            className="self-start rounded-full bg-yellow-400 px-6 py-2.5 text-sm font-bold text-zinc-950 transition hover:bg-yellow-300"
-          >
-            Save preferences
-          </button>
         </div>
       )}
 
