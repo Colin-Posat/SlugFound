@@ -39,13 +39,19 @@ The schema, RLS policies, indexes, triggers, and Storage bucket all live in
 `/supabase/migrations/`. Apply them in order:
 
 1. Open the SQL editor: `https://supabase.com/dashboard/project/<your-project-ref>/sql/new`
-2. Paste each file's contents, **clicking "Run" between each**:
-   - `supabase/migrations/0001_profiles.sql`
-   - `supabase/migrations/0002_items.sql`
-   - `supabase/migrations/0003_storage.sql`
+2. Paste each file's contents in numeric order, **clicking "Run" between each**:
+   - `0001_profiles.sql` · `0002_items.sql` · `0003_storage.sql`
+   - `0004_embeddings.sql` · `0005_item_coordinates.sql` · `0006_messaging.sql`
+   - `0007_email_notifications.sql` · `0008_avatars_storage.sql` · `0009_reports.sql`
+   - `0011_harden_functions.sql`
+
+> `0010_message_webhook.sql` is a **template**, not a ready-to-run migration. It
+> wires the new-message email webhook and needs your deployed app URL +
+> `NOTIFY_WEBHOOK_SECRET` filled in first — see the email notifications section
+> in [`DOCS.md`](./DOCS.md). Apply it only after the app is deployed.
 
 > Optional: After signing up your first user, you can run `supabase/seed.sql` in
-> the SQL editor to load 12 sample items for development.
+> the SQL editor to load sample items for development.
 
 ### 4. Disable email confirmation for local dev
 
@@ -57,15 +63,19 @@ In production you want email confirmation on. For local development, turn it off
 
 ### 5. Set up environment variables
 
-Create a `.env.local` file in the project root:
+Copy `.env.example` to `.env.local` and fill in your values:
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc... your anon key here
+```bash
+cp .env.example .env.local
 ```
 
+Only the two Supabase keys are required to run the core app. The AI and email
+keys enable optional features (photo search, AI scan, message emails).
+
 > ⚠️ **Never commit `.env.local`.** It's already in `.gitignore`.
-> The `anon` key is safe to ship to the browser; the `service_role` key is **not** — never put that in `.env.local` for a Next.js client app.
+> The `anon` key is safe to ship to the browser. `SUPABASE_SERVICE_ROLE_KEY`,
+> `RESEND_API_KEY`, and `NOTIFY_WEBHOOK_SECRET` are **server-only secrets** —
+> they're read only in Server Actions / Route Handlers, never in client code.
 
 ### 6. Start the dev server
 
@@ -82,11 +92,18 @@ sign up with a `@ucsc.edu` email, and you're in.
 
 | Variable | Required | Description |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | **Yes** | Project URL from Supabase Settings → API. Used by both the browser and server clients. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Yes** | Public anon key from Supabase Settings → API. Safe for the browser — Row Level Security policies protect data. |
+| `NEXT_PUBLIC_SUPABASE_URL` | **Yes** | Project URL from Supabase Settings → API. Used by the browser and server clients. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Yes** | Public anon key. Safe for the browser — RLS protects data. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Email only | Service role key (bypasses RLS). **Server-only.** Used by the email notification + unsubscribe routes (US 4.4). |
+| `GEMINI_API_KEY` | AI only | Google Gemini key for photo search + embeddings. |
+| `GROQ_API_KEY` | AI only | Groq key for the AI item scan on the create form. |
+| `RESEND_API_KEY` | Email only | Resend API key for sending new-message emails. **Server-only.** |
+| `EMAIL_FROM` | Email only | From address for emails (defaults to Resend's test sender). |
+| `NOTIFY_WEBHOOK_SECRET` | Email only | Shared secret the Supabase webhook sends and the route verifies. **Server-only.** |
+| `NEXT_PUBLIC_APP_URL` | Email only | Public base URL of the deployed app, used in email links + as the webhook target. |
 
-> The old `SESSION_SECRET` (used by the pre-Sprint-2 JWT auth) is no longer
-> required and can be removed from `.env.local`.
+> See [`.env.example`](./.env.example) for a copy-paste template. The old
+> `SESSION_SECRET` (pre-Sprint-2 JWT auth) is no longer used.
 
 ---
 
@@ -123,15 +140,18 @@ npm run test:coverage    # generate coverage report (output in coverage/)
 ```
 app/
   (public)/          # Unauthenticated pages — landing, login, signup
-  (app)/             # Authenticated pages — lost, found, messages, create, profile
-  actions/           # Next.js Server Actions (auth, items)
+  (app)/             # Authenticated pages — lost, found, items/[id], messages, create, profile
+  actions/           # Next.js Server Actions (auth, items, messages, profile, reports)
+  api/               # Route Handlers — photo-search, ai/scan-item, notifications/*
   components/        # Shared UI components
-    messages/        # All messaging UI sub-components (still mock data)
+    messages/        # Messaging UI (real-time, Supabase-backed)
     ui/              # Primitive components (Badge)
   lib/
-    supabase/        # Supabase client wrappers (browser, server, proxy)
+    supabase/        # Supabase client wrappers (browser, server, admin, proxy)
+    email/           # Resend wrapper + new-message email template
     auth-context.tsx # React context exposing the current user/profile
     items.ts         # Items repository (server-side query helpers)
+    item-status.ts   # Status transition rules; geo.ts, storage.ts — pure helpers
     definitions.ts   # Shared types
     format.ts        # Display helpers (timeAgo, initials)
 proxy.ts             # Next.js 16 proxy — refreshes Supabase session + route guards
@@ -150,11 +170,14 @@ See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the team workflow.
 
 | Technology | Version | Role |
 |---|---|---|
-| Next.js | 16.2.3 | Framework (App Router) |
+| Next.js | 16.2.x | Framework (App Router) |
 | React | 19.2.4 | UI |
 | Tailwind CSS | v4 | Styling |
-| Supabase | latest | Auth, Postgres, Storage |
+| Supabase | latest | Auth, Postgres, Storage, Realtime |
 | `@supabase/ssr` | latest | Server-side rendering integration |
+| `react-leaflet` / `leaflet` | 5.x / 1.9 | Maps (location picker + map view) |
+| `resend` | latest | Transactional email (new-message notifications) |
+| `@google/generative-ai` / `groq-sdk` | latest | AI photo search + item scan |
 | `zod` | 4.x | Form validation |
 | `sonner` | latest | Toast notifications |
 | TypeScript | 5.x | Type safety |

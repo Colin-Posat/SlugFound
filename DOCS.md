@@ -31,17 +31,23 @@ Browser ──► Next.js (App Router)
               │
               ├── Server Components  → read cookies, fetch from Supabase
               ├── Client Components  → call Supabase via the browser client
-              └── Server Actions     → mutations (signup, login, createItem)
+              ├── Server Actions     → mutations (signup, items, profile, reports…)
+              └── Route Handlers     → AI (photo-search, scan-item) + email webhooks
                        │
                        ▼
               Supabase project
-              ├── auth.users        (Supabase Auth)
-              ├── public.profiles   (1:1 with auth.users via trigger)
-              ├── public.items      (lost/found posts)
-              └── storage.objects   (item-images bucket)
+              ├── auth.users         (Supabase Auth)
+              ├── public.profiles    (1:1 with auth.users via trigger)
+              ├── public.items       (lost/found posts)
+              ├── public.conversations + public.messages  (real-time messaging)
+              ├── public.reports + public.notification_log
+              └── storage.objects    (item-images, avatars buckets)
 ```
 
-There are no separate API routes. Server Actions handle all mutations, and Server Components handle all reads.
+Most mutations are Server Actions and most reads are Server Components. A few
+things genuinely need an HTTP endpoint and live under `app/api/` as Route
+Handlers: AI photo search, AI item scan, and the email notification +
+unsubscribe webhooks (the Supabase DB webhook POSTs to one of them).
 
 ---
 
@@ -57,12 +63,24 @@ app/
     signup/page.tsx  →  /signup
 
   (app)/             →  authenticated layout (sidebar, AuthProvider, UnreadProvider)
-    lost/page.tsx    →  /lost
-    found/page.tsx   →  /found
-    messages/page.tsx →  /messages
-    create/page.tsx  →  /create
-    profile/page.tsx →  /profile
+    lost/page.tsx        →  /lost
+    found/page.tsx       →  /found
+    found/photo-search/  →  /found/photo-search (AI photo search)
+    items/[id]/page.tsx  →  /items/[id]       (canonical item detail)
+    items/[id]/edit/     →  /items/[id]/edit  (owner-only edit/delete)
+    messages/page.tsx    →  /messages
+    create/page.tsx      →  /create
+    profile/page.tsx     →  /profile
+
+app/api/                 →  Route Handlers (no layout)
+  photo-search/          →  POST /api/photo-search
+  ai/scan-item/          →  POST /api/ai/scan-item
+  notifications/new-message/   →  POST (Supabase webhook target)
+  notifications/unsubscribe/   →  GET  (one-click email opt-out)
 ```
+
+> `/lost/[id]` and `/found/[id]` still exist but now permanently redirect to the
+> canonical `/items/[id]` (US 4.1), so old links keep working.
 
 ### Layouts
 
@@ -214,28 +232,50 @@ All schema lives in `/supabase/migrations/` and is applied in order:
 | `0001_profiles.sql` | `profiles` table, RLS, `handle_new_user()` trigger, `set_updated_at()` helper |
 | `0002_items.sql` | `items` table with `item_type` and `item_status` enums, RLS, indexes |
 | `0003_storage.sql` | `item-images` Storage bucket + RLS policies |
+| `0004_embeddings.sql` | `items.image_embedding` (jsonb) for photo similarity |
+| `0005_item_coordinates.sql` | `items.lat` / `items.lng` for the map picker |
+| `0006_messaging.sql` | `conversations` + `messages` tables, RLS, Realtime |
+| `0007_email_notifications.sql` | `profiles.email_notifications` + `unsubscribe_token`; `notification_log` |
+| `0008_avatars_storage.sql` | `avatars` Storage bucket + RLS policies |
+| `0009_reports.sql` | `reports` table + `report_reason` enum + RLS; `items.reported_flag` + auto-flag trigger |
+| `0010_message_webhook.sql` | **Template** — DB webhook → email route (apply after deploy; needs URL + secret) |
+| `0011_harden_functions.sql` | Pin `set_updated_at` search_path; revoke RPC EXECUTE on definer trigger functions |
 
 ### Tables
 
 **`public.profiles`** — one row per registered user, linked to `auth.users.id`.
-Created automatically on signup by the `handle_new_user()` trigger.
+Created automatically on signup by the `handle_new_user()` trigger. Columns:
+`display_name`, `email` (UCSC CHECK), `avatar_url`, `college`,
+`email_notifications` (bool, default true), `unsubscribe_token` (uuid, for
+one-click email opt-out).
 
 **`public.items`** — lost/found posts.
 
 ```
-id          uuid (PK)
-user_id     uuid → profiles.id
-type        'lost' | 'found'
-title       text (1-120 chars)
-description text (1-1000 chars)
-category    text (constrained to a fixed list)
-location    text
-status      'active' | 'claimed' | 'resolved'
-image_url   text (nullable)
-emoji       text (nullable, optional visual flair)
-created_at  timestamptz
-updated_at  timestamptz (auto-bumped via trigger)
+id            uuid (PK)
+user_id       uuid → profiles.id
+type          'lost' | 'found'
+title         text (1-120 chars)
+description   text (1-1000 chars)
+category      text (constrained to a fixed list)
+location      text
+status        'active' | 'claimed' | 'resolved'
+image_url     text (nullable)
+emoji         text (nullable, optional visual flair)
+lat, lng      double precision (nullable, map coordinates)
+reported_flag boolean (default false; true once 3+ reports)
+created_at    timestamptz
+updated_at    timestamptz (auto-bumped via trigger)
 ```
+
+**`public.conversations` / `public.messages`** — real-time messaging (0006). A
+conversation links two users + one item (`user_a < user_b` CHECK prevents
+duplicates); messages belong to a conversation. Realtime is enabled on
+`messages`.
+
+**`public.reports`** — one row per (item, reporter); write-only for users
+(0009). **`public.notification_log`** — (conversation, recipient) → last email
+time, for rate limiting; service-role only.
 
 ### Row Level Security (RLS)
 
@@ -245,8 +285,12 @@ Every table has RLS enabled. The policies are:
 |---|---|---|---|---|
 | `profiles` | anyone authenticated | self only (`auth.uid() = id`) | self only | — |
 | `items` | anyone authenticated | self only (`auth.uid() = user_id`) | self only | self only |
+| `conversations` | participants only | participants only | participants only | — |
+| `messages` | conversation participants | participants (as sender) | — | — |
+| `reports` | — (no policy) | self only (`auth.uid() = reporter_id`) | — | — |
+| `notification_log` | — | — | — | — (service role only) |
 
-This means: even if a malicious client fakes the `user_id` field on insert, RLS will reject it because `auth.uid()` won't match.
+This means: even if a malicious client fakes the `user_id` field on insert, RLS will reject it because `auth.uid()` won't match. `reports` and `notification_log` have RLS enabled with no (or insert-only) policies, so clients can't read others' data — only the service role (email routes / admin) can.
 
 ### Indexes
 
@@ -258,20 +302,23 @@ items_user_id_idx       on items (user_id)                -- profile listings
 items_coords_idx        on items (lat, lng) WHERE lat IS NOT NULL  -- future radius filter
 ```
 
-The `items` table also has nullable `lat DOUBLE PRECISION` and `lng DOUBLE PRECISION` columns (migration `0004`) that store precise pin coordinates from the map location picker. Existing rows have `NULL` coordinates and are unaffected.
+The `items` table also has nullable `lat DOUBLE PRECISION` and `lng DOUBLE PRECISION` columns (migration `0005`) that store precise pin coordinates from the map location picker. Existing rows have `NULL` coordinates and are unaffected.
 
 ### The repository pattern
 
 Don't write inline `supabase.from('items')...` queries everywhere. Use the helpers in `app/lib/items.ts`:
 
 ```typescript
-listItems({ type: 'lost', search, category, location })  // for /lost and /found
-getItemById(id)                                          // for detail pages
-listUserItems(userId)                                    // for profile
-getUserItemStats(userId)                                 // for profile stats
+listItems({ type: 'lost', search, category, location, activeOnly })  // /lost, /found
+getItemById(id)            // detail pages — wrapped in React cache() (deduped per request)
+listUserItems(userId)      // profile listings
+getUserItemStats(userId)   // profile stats (reunited = claimed + resolved)
 ```
 
-This keeps query logic in one place and makes it easy to add caching or change implementations.
+`listItems` orders active items first (then claimed/resolved), excludes
+`reported_flag = true` items, and honours the `activeOnly` toggle (US 4.3/4.6).
+Conversation/message reads live in `app/lib/conversations.ts`. This keeps query
+logic in one place and makes it easy to add caching or change implementations.
 
 ---
 
@@ -299,6 +346,14 @@ If you upload to any other path, the request is rejected.
 - Allowed MIME types: `image/jpeg`, `image/png`, `image/webp`
 - Both are enforced at the bucket level AND in the `createItem` server action
 
+### The `avatars` bucket (US 4.5)
+
+A second bucket, `avatars` (migration 0008), follows the exact same pattern —
+public-read, upload-only-by-owner at `avatars/<user_id>/<uuid>.<ext>` — with a
+**2 MB** cap. The `updateProfile` server action uploads the new avatar and
+removes the old object. `updateItem` and `deleteItem` do the same cleanup for
+item images via `storagePathFromPublicUrl()` in `app/lib/storage.ts`.
+
 ---
 
 ## 9. State management
@@ -317,7 +372,7 @@ When these change, the server page re-runs and refetches.
 | Context | What it shares |
 |---|---|
 | `AuthContext` | `user`, `profile`, `loading`, `refreshProfile()` |
-| `UnreadContext` | unread message counts (still mock data) |
+| `UnreadContext` | unread message counts (live from Supabase) |
 
 Both are mounted in `(app)/layout.tsx`.
 
@@ -379,9 +434,55 @@ The map component must be dynamically imported with `{ ssr: false }` because Lea
 
 Server fetches profile + stats + listings in parallel; client renders interactive tabs. Stats are real counts from the DB (`select count(*) where user_id = …`).
 
-### Messages
+### Messages (Sprint 3)
 
-Still mock data — see `app/lib/mock-messages.ts`. Wiring messages to Supabase is **not in Sprint 2**; it's tracked as a future deliverable. The UI is fully functional but resets on refresh.
+**Files:** `(app)/messages/page.tsx`, `components/messages/*`, `actions/messages.ts`, `lib/conversations.ts`, `lib/use-realtime-messages.ts`
+
+Real Supabase-backed chat. The active conversation is URL state (`/messages?c=<id>`). `findOrCreateConversation()` (sorts the two user ids so `user_a < user_b`) opens/reuses a conversation; `use-realtime-messages` subscribes to `postgres_changes` on `messages` for live updates. `markConversationRead()` bumps the per-side `last_read_at` used for unread counts.
+
+### Item detail (US 4.1)
+
+**Files:** `(app)/items/[id]/page.tsx` (+ `loading.tsx`, `not-found.tsx`), `components/item-detail.tsx`
+
+Canonical detail route. The server page fetches via `getItemById` (React-cached so the page + `generateMetadata` share one query), 404s via `notFound()`, and computes `isOwner`. `generateMetadata` sets a dynamic `<title>`/`<meta description>`. Owners see Edit + status buttons; non-owners see Message + a Report menu.
+
+### Edit & delete (US 4.2)
+
+**Files:** `(app)/items/[id]/edit/page.tsx` + `edit-form.tsx`, `actions/items.ts → updateItem() / deleteItem()`
+
+The edit page is owner-only (non-owners get a 403 message, never the form). `updateItem` swaps the photo (upload new, delete old) and re-checks ownership; `deleteItem` removes the row + Storage image behind a confirmation modal. `updated_at` is auto-bumped by the trigger from migration 0002.
+
+### Claim / resolve status (US 4.3)
+
+**Files:** `components/item-detail.tsx`, `components/item-card.tsx`, `lib/item-status.ts`, `lib/items.ts`, `components/items-filter.tsx`
+
+`nextStatuses()` encodes the rules (active → claimed/resolved, claimed → resolved, resolved terminal). Cards mute + badge non-active items; `listItems` sorts active-first and supports an "Active only" toggle (default on; `?all=1` shows everything).
+
+### Profile editing (US 4.5)
+
+**Files:** `(app)/profile/profile-view.tsx`, `actions/profile.ts → updateProfile()`, `lib/profile-schemas.ts`
+
+Inline form on the Account page edits `display_name` (≤40) + avatar (≤2 MB → `avatars` bucket). On save it calls `useAuth().refreshProfile()`. Avatars render (with initials fallback) in the sidebar, item cards, item detail, and message list/thread.
+
+### Reports (US 4.6)
+
+**Files:** `components/report-menu.tsx`, `actions/reports.ts`, `lib/reports-schemas.ts`
+
+Non-owners get a "⋯ → Report" modal (reason + optional notes). Inserts into `reports`; a duplicate (unique `item_id, reporter_id`) returns "already reported". At 3+ reports a trigger sets `items.reported_flag`, which hides the item from listings and shows a warning banner on its detail page.
+
+### Map view (US 4.7)
+
+**Files:** `components/items-map.tsx`, `components/items-map-dynamic.tsx`, `lib/geo.ts`, `components/items-filter.tsx`
+
+A Map/List toggle on the listings pages. The map (react-leaflet, UCSC center) drops a pin per geotagged item with a popup (thumbnail, title, category, View item). Server-side filters keep pins in sync with the list; an info bar shows geotagged-vs-total. Like the picker, it's dynamically imported with `{ ssr: false }`.
+
+### Email notifications (US 4.4)
+
+**Files:** `api/notifications/new-message/route.ts`, `api/notifications/unsubscribe/route.ts`, `lib/email/*`, `lib/supabase/admin.ts`, `actions/profile.ts → updateEmailNotifications()`
+
+A Supabase DB webhook (template `0010_message_webhook.sql`) POSTs each new message to the notification route, which verifies a shared secret, resolves the recipient via the **service-role** admin client, honours their `email_notifications` opt-out, enforces a 10-minute per-conversation rate limit (`notification_log`), and sends a branded email via Resend. The footer's one-click unsubscribe hits `/api/notifications/unsubscribe?token=<unsubscribe_token>`.
+
+**Setup (not fully wired from localhost):** set `RESEND_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NOTIFY_WEBHOOK_SECRET`, `EMAIL_FROM`, and `NEXT_PUBLIC_APP_URL` (a public URL — cloud Supabase can't reach localhost). Then fill the placeholders in `0010_message_webhook.sql` and apply it, or create the webhook via the Supabase Dashboard → Database → Webhooks UI.
 
 ---
 
@@ -401,7 +502,7 @@ The `<Toaster>` is mounted globally in `app/layout.tsx`.
 
 ### Badge
 
-`components/ui/badge.tsx` — `'lost' | 'found' | 'active' | 'resolved'`.
+`components/ui/badge.tsx` — `'lost' | 'found' | 'active' | 'claimed' | 'resolved' | 'match-high' | 'match-medium' | 'match-low'`.
 
 ### Time formatting
 
@@ -446,8 +547,7 @@ These are real issues, not hypothetical. Ordered by severity.
 
 | Issue | Where | Impact |
 |---|---|---|
-| Item detail pages don't exist | `components/item-card.tsx` links to `/{type}/{id}` | Every card click 404s |
-| Messages still mock data | `app/lib/mock-messages.ts` | No real chat between users yet — out of scope for Sprint 2 |
+| Email webhook not wired by default | `0010_message_webhook.sql` (template) | New-message emails only send after the webhook is applied with a public URL + secret (US 4.4) |
 | No password reset flow | login form's "Forgot password?" link goes to `#` | Users locked out can't recover |
 | `AuthContext` doesn't re-fetch profile on signup race | `auth-context.tsx` | Profile may be `null` for ~100ms after signup until trigger commits |
 
@@ -456,16 +556,20 @@ These are real issues, not hypothetical. Ordered by severity.
 | Issue | Where | Impact |
 |---|---|---|
 | `AppNav` component is dead code | `components/app-nav.tsx` | Not imported anywhere — should be deleted |
-| Photo preview shows the file name but no thumbnail | `create-form.tsx` | Minor UX — uploaded image is not previewed |
-| "Edit profile" button does nothing | `profile-view.tsx` | UI affordance with no action |
+| Photo preview shows the file name but no thumbnail | `create-form.tsx` | Minor UX (the edit form does show a thumbnail) |
 | "Change password" button does nothing | `profile-view.tsx` | UI affordance with no action |
-| Settings tab is UI-only | `profile-view.tsx` | College + notification preferences don't persist |
+| College preference is UI-only | `profile-view.tsx` settings | College select doesn't persist (email-notification toggle now does) |
 | Real-time listings not subscribed | `lost/found pages` | New posts only appear on next refresh (US 2.5 stretch) |
+| Leaked-password protection disabled | Supabase Auth settings | Enable HaveIBeenPwned check before launch (one-click in dashboard) |
+| Public buckets allow listing | `item-images`, `avatars` SELECT policies | Low risk (public data, UUID names); advisor WARN — could scope SELECT down |
 
 ### Low
 
 | Issue | Where | Impact |
 |---|---|---|
-| No email format hint on the wildcard input | `signup-form.tsx` | Already shows an inline `@ucsc.edu` hint, but no docs link |
 | Landing page stats are fake | `(public)/page.tsx` | "48 items recovered" is hardcoded copy |
-| Toast errors on Create form trigger on every render | `create-form.tsx` | Cosmetic — fires once per state change but noisy in StrictMode |
+| Toast errors on Create form trigger on every render | `create-form.tsx` | Cosmetic — noisy in StrictMode (the profile + report forms use the transition pattern instead) |
+
+> **Resolved this sprint (4):** item detail pages now live at `/items/[id]`;
+> messages are real-time (Sprint 3); edit/delete, claim/resolve, profile +
+> avatar editing, reporting, map view, and email notifications all shipped.
