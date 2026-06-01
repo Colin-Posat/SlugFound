@@ -44,6 +44,7 @@ export type Item = {
   emoji: string | null
   lat: number | null
   lng: number | null
+  reported_flag: boolean
   created_at: string
   updated_at: string
   // Hydrated when we join the profiles table (optional)
@@ -112,6 +113,17 @@ export type MessageRow = {
   body: string
   created_at: string
 }
+
+// ─── Reports (US 4.6) ───────────────────────────────────────────────────────
+
+export const REPORT_REASONS = [
+  { value: 'spam', label: 'Spam' },
+  { value: 'offensive', label: 'Offensive or inappropriate' },
+  { value: 'duplicate', label: 'Duplicate listing' },
+  { value: 'other', label: 'Other' },
+] as const
+
+export type ReportReason = (typeof REPORT_REASONS)[number]['value']
 
 // ─── Campus locations (used by Create form + filters) ───────────────────────
 

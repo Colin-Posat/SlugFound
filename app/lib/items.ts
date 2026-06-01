@@ -43,6 +43,7 @@ export async function listItems(opts: ListItemsOptions): Promise<Item[]> {
     .from('items')
     .select('*, profile:profiles(id, display_name, avatar_url)')
     .eq('type', type)
+    .eq('reported_flag', false) // hide items flagged by 3+ reports (US 4.6)
     .order('status', { ascending: true })
     .order('created_at', { ascending: false })
     .limit(limit)

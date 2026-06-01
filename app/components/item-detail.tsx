@@ -20,6 +20,7 @@ import { findOrCreateConversation } from '@/app/actions/messages'
 import { nextStatuses } from '@/app/lib/item-status'
 import type { Item, ItemStatus } from '@/app/lib/definitions'
 import LocationMapPicker from '@/app/components/location-map-picker-dynamic'
+import ReportMenu from '@/app/components/report-menu'
 
 interface ItemDetailProps {
   item: Item
@@ -58,13 +59,23 @@ export default function ItemDetail({ item, isOwner }: ItemDetailProps) {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-10">
-      {/* Back */}
-      <Link
-        href={backHref}
-        className="mb-6 inline-flex items-center gap-1.5 text-sm text-zinc-500 transition-colors hover:text-zinc-300"
-      >
-        ← All {item.type} items
-      </Link>
+      {/* Back + report menu */}
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <Link
+          href={backHref}
+          className="inline-flex items-center gap-1.5 text-sm text-zinc-500 transition-colors hover:text-zinc-300"
+        >
+          ← All {item.type} items
+        </Link>
+        {!isOwner && <ReportMenu itemId={item.id} />}
+      </div>
+
+      {/* Flagged banner — shown when the item has accumulated 3+ reports */}
+      {item.reported_flag && (
+        <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          ⚠️ This listing has been flagged by multiple users and is under review.
+        </div>
+      )}
 
       {/* Image / emoji */}
       <div className="mb-6 flex h-72 items-center justify-center overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
