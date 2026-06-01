@@ -146,11 +146,22 @@ export default function ProfileView({ profile, email, stats, listings }: Profile
                 >
                   <span className="text-2xl">{item.emoji ?? '📦'}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-white">{item.title}</p>
+                    <Link
+                      href={`/items/${item.id}`}
+                      className="truncate font-medium text-white transition-colors hover:text-yellow-400"
+                    >
+                      {item.title}
+                    </Link>
                     <p className="text-xs text-zinc-500">{timeAgo(item.created_at)}</p>
                   </div>
                   <Badge variant={item.type as BadgeVariant}>{item.type}</Badge>
                   <Badge variant={item.status as BadgeVariant}>{item.status}</Badge>
+                  <Link
+                    href={`/items/${item.id}/edit`}
+                    className="rounded-full border border-zinc-700 px-3 py-1 text-xs font-medium text-zinc-400 transition hover:border-zinc-500 hover:text-white"
+                  >
+                    Edit
+                  </Link>
                 </li>
               ))}
             </ul>

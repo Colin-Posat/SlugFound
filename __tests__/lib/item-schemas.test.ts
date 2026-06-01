@@ -1,4 +1,4 @@
-import { CreateItemSchema } from '@/app/lib/item-schemas'
+import { CreateItemSchema, UpdateItemSchema } from '@/app/lib/item-schemas'
 
 const BASE_VALID = {
   type: 'lost' as const,
@@ -57,6 +57,26 @@ describe('CreateItemSchema — lat/lng fields', () => {
 
   it('rejects a lng value above 180', () => {
     const result = CreateItemSchema.safeParse({ ...BASE_VALID, lat: '37', lng: '181' })
+    expect(result.success).toBe(false)
+  })
+})
+
+describe('UpdateItemSchema', () => {
+  it('accepts a valid edit payload', () => {
+    const result = UpdateItemSchema.safeParse({ ...BASE_VALID, title: 'Updated name' })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.title).toBe('Updated name')
+    }
+  })
+
+  it('rejects an empty title (all core fields stay required)', () => {
+    const result = UpdateItemSchema.safeParse({ ...BASE_VALID, title: '' })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects an unknown category', () => {
+    const result = UpdateItemSchema.safeParse({ ...BASE_VALID, category: 'Spaceship' })
     expect(result.success).toBe(false)
   })
 })
