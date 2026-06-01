@@ -11,6 +11,7 @@
  */
 
 import 'server-only'
+import { cache } from 'react'
 import { createSupabaseServerClient } from './supabase/server'
 import type { Item, ItemType } from './definitions'
 
@@ -63,8 +64,14 @@ export async function listItems(opts: ListItemsOptions): Promise<Item[]> {
   return (data ?? []) as Item[]
 }
 
-/** Fetch a single item by id (with poster profile joined). */
-export async function getItemById(id: string): Promise<Item | null> {
+/**
+ * Fetch a single item by id (with poster profile joined).
+ *
+ * Wrapped in React `cache()` so that a detail page and its `generateMetadata`
+ * (which both need the item) share a single Supabase query per request.
+ * Supabase calls aren't auto-memoized the way `fetch` is, so we memoize here.
+ */
+export const getItemById = cache(async (id: string): Promise<Item | null> => {
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase
     .from('items')
@@ -77,7 +84,7 @@ export async function getItemById(id: string): Promise<Item | null> {
     return null
   }
   return data as Item
-}
+})
 
 /** Stats used by the Account page (US 2.6). */
 export interface UserItemStats {

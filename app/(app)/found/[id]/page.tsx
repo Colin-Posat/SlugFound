@@ -1,33 +1,17 @@
-import { notFound, redirect } from 'next/navigation'
-import { getItemById } from '@/app/lib/items'
-import { createSupabaseServerClient } from '@/app/lib/supabase/server'
-import ItemDetail from '@/app/components/item-detail'
+import { redirect } from 'next/navigation'
 
 /**
- * Found item detail page (/found/[id]).
+ * Legacy found-item detail route.
  *
- * Mirror of /lost/[id]/page.tsx — fetches by id, redirects to /lost/[id]
- * if the item turns out to be a lost listing.
+ * Item detail now lives at the canonical /items/[id] route (US 4.1). This page
+ * is kept only so existing /found/[id] links and bookmarks keep working — it
+ * permanently redirects to the canonical URL.
  */
 type PageProps = {
   params: Promise<{ id: string }>
 }
 
-export default async function FoundItemPage({ params }: PageProps) {
+export default async function FoundItemRedirect({ params }: PageProps) {
   const { id } = await params
-
-  const item = await getItemById(id)
-  if (!item) notFound()
-
-  if (item.type !== 'found') {
-    redirect(`/lost/${item.id}`)
-  }
-
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const isOwner = user?.id === item.user_id
-
-  return <ItemDetail item={item} isOwner={isOwner} />
+  redirect(`/items/${id}`)
 }

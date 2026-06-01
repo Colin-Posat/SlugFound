@@ -12,7 +12,7 @@ export default function ItemCard({ item }: { item: Item }) {
 
   return (
     <Link
-      href={`/${item.type}/${item.id}`}
+      href={`/items/${item.id}`}
       className="group flex flex-col rounded-2xl border border-zinc-800 bg-zinc-900 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-zinc-600 hover:shadow-lg hover:shadow-black/30"
     >
       {/* Image or emoji placeholder */}
