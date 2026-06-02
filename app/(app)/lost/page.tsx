@@ -12,31 +12,37 @@ import { listItems } from '@/app/lib/items'
  */
 type PageProps = {
   // Next.js 16: searchParams is a Promise — must await.
-  searchParams: Promise<{ q?: string; category?: string; location?: string }>
+  searchParams: Promise<{ q?: string; category?: string; location?: string; all?: string }>
 }
 
 export default async function LostPage({ searchParams }: PageProps) {
-  const { q = '', category = '', location = '' } = await searchParams
+  const { q = '', category = '', location = '', all } = await searchParams
+  // "Active only" is the default; ?all=1 shows claimed/resolved too (US 4.3).
+  const showAll = all === '1'
 
   const items = await listItems({
     type: 'lost',
     search: q,
     category: category || undefined,
     location: location || undefined,
+    activeOnly: !showAll,
   })
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="reveal mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Lost Items</h1>
-          <p className="mt-1 text-sm text-zinc-400">
+          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-gold-ink">
+            UCSC · Lost &amp; Found Board
+          </p>
+          <h1 className="mt-1 font-display text-4xl font-bold text-ink">Lost Items</h1>
+          <p className="mt-1 font-mono text-xs uppercase tracking-wider text-muted">
             {items.length} {items.length === 1 ? 'listing' : 'listings'}
           </p>
         </div>
         <Link
           href="/create?type=lost"
-          className="inline-flex h-10 items-center rounded-full bg-yellow-400 px-5 text-sm font-semibold text-zinc-950 transition hover:bg-yellow-300"
+          className="inline-flex h-10 items-center rounded-full bg-gold px-5 text-sm font-semibold text-on-gold transition hover:bg-gold-bright"
         >
           + Report Lost Item
         </Link>
@@ -49,6 +55,7 @@ export default async function LostPage({ searchParams }: PageProps) {
         initialSearch={q}
         initialCategory={category}
         initialLocation={location}
+        initialShowAll={showAll}
       />
     </div>
   )

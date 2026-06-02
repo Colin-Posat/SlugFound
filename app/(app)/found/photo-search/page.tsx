@@ -7,12 +7,12 @@ export default function PhotoSearchPage() {
       <div className="mb-8">
         <Link
           href="/found"
-          className="mb-4 inline-flex items-center gap-1.5 text-sm text-zinc-500 transition hover:text-white"
+          className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted transition hover:text-ink"
         >
           ← Back to found items
         </Link>
-        <h1 className="text-3xl font-bold text-white">Find by Photo</h1>
-        <p className="mt-1 text-sm text-zinc-400">
+        <h1 className="text-3xl font-bold text-ink">Find by Photo</h1>
+        <p className="mt-1 text-sm text-muted">
           Upload a photo of your lost item and we&apos;ll find the closest matches.
         </p>
       </div>

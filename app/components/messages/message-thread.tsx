@@ -28,35 +28,44 @@ export default function MessageThread({
   }, [messages])
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden border-l border-zinc-800">
+    <div className="flex flex-1 flex-col overflow-hidden border-l border-line">
       {/* Header */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-zinc-800 px-4 py-3">
+      <div className="flex shrink-0 items-center gap-3 border-b border-line px-4 py-3">
         <button
           type="button"
           onClick={onBack}
-          className="text-zinc-400 transition-colors hover:text-white md:hidden"
+          className="text-muted transition-colors hover:text-ink md:hidden"
           aria-label="Back to conversations"
         >
           ←
         </button>
 
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-sm font-bold text-white">
-          {conversation.otherUser.initial}
-        </div>
+        {conversation.otherUser.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={conversation.otherUser.avatarUrl}
+            alt={conversation.otherUser.name}
+            className="h-9 w-9 shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-sm font-bold text-ink-soft">
+            {conversation.otherUser.initial}
+          </div>
+        )}
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-white">
+          <p className="truncate text-sm font-semibold text-ink">
             {conversation.otherUser.name}
           </p>
           <div className="flex items-center gap-1.5">
-            <span className="truncate text-xs text-zinc-500">
+            <span className="truncate text-xs text-muted">
               {conversation.itemEmoji} {conversation.itemTitle}
             </span>
             <span
               className={`shrink-0 rounded-full border px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide ${
                 isLost
-                  ? 'border-red-500/20 bg-red-500/10 text-red-400'
-                  : 'border-green-500/20 bg-green-500/10 text-green-400'
+                  ? 'border-lost/25 bg-lost-soft text-lost'
+                  : 'border-found/25 bg-found-soft text-found'
               }`}
             >
               {conversation.itemType}

@@ -1,13 +1,16 @@
-export type BadgeVariant = 'lost' | 'found' | 'active' | 'resolved' | 'match-high' | 'match-medium' | 'match-low'
+export type BadgeVariant = 'lost' | 'found' | 'active' | 'claimed' | 'resolved' | 'match-high' | 'match-medium' | 'match-low'
 
+// Filing-label badges: small, mono, uppercase, letter-spaced — like a tag on a
+// lost-and-found ticket. Soft tinted fills keyed to the bulletin palette.
 const STYLES: Record<BadgeVariant, string> = {
-  lost: 'border-red-500/20 bg-red-500/10 text-red-400',
-  found: 'border-green-500/20 bg-green-500/10 text-green-400',
-  active: 'border-zinc-700 bg-zinc-800/50 text-zinc-400',
-  resolved: 'border-yellow-400/20 bg-yellow-400/10 text-yellow-400',
-  'match-high': 'border-green-400/40 bg-green-400/20 text-green-300',
-  'match-medium': 'border-yellow-400/40 bg-yellow-400/20 text-yellow-300',
-  'match-low': 'border-orange-400/40 bg-orange-400/20 text-orange-300',
+  lost: 'border-lost/25 bg-lost-soft text-lost',
+  found: 'border-found/25 bg-found-soft text-found',
+  active: 'border-line-strong bg-surface-2 text-ink-soft',
+  claimed: 'border-claimed/25 bg-claimed-soft text-claimed',
+  resolved: 'border-gold/40 bg-gold-soft text-resolved',
+  'match-high': 'border-found/30 bg-found-soft text-found',
+  'match-medium': 'border-gold/40 bg-gold-soft text-resolved',
+  'match-low': 'border-line-strong bg-surface-2 text-muted',
 }
 
 interface BadgeProps {
@@ -19,7 +22,7 @@ interface BadgeProps {
 export default function Badge({ variant, children, className = '' }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${STYLES[variant]} ${className}`}
+      className={`inline-flex items-center rounded-[4px] border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] ${STYLES[variant]} ${className}`}
     >
       {children}
     </span>

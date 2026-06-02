@@ -7,6 +7,7 @@ describe('toChatMessage', () => {
     conversation_id: 'conv-1',
     sender_id: 'user-a',
     body: 'Hello there',
+    image_url: null,
     created_at: '2026-05-28T10:00:00Z',
   }
 
@@ -17,6 +18,7 @@ describe('toChatMessage', () => {
       conversationId: 'conv-1',
       senderId: 'user-a',
       body: 'Hello there',
+      imageUrl: undefined,
       sentAt: '2026-05-28T10:00:00Z',
     })
   })
@@ -24,6 +26,20 @@ describe('toChatMessage', () => {
   it('preserves the ISO timestamp in sentAt', () => {
     const result = toChatMessage(row)
     expect(new Date(result.sentAt).toISOString()).toBe('2026-05-28T10:00:00.000Z')
+  })
+
+  it('maps an image-only MessageRow (null body) correctly', () => {
+    const imageRow: MessageRow = {
+      id: 'msg-2',
+      conversation_id: 'conv-1',
+      sender_id: 'user-a',
+      body: null,
+      image_url: 'https://x.supabase.co/storage/v1/object/public/message-images/photo.jpg',
+      created_at: '2026-05-28T11:00:00Z',
+    }
+    const result = toChatMessage(imageRow)
+    expect(result.body).toBe('')
+    expect(result.imageUrl).toBe(imageRow.image_url)
   })
 })
 
@@ -53,7 +69,7 @@ describe('toConversation', () => {
     type: 'lost' as const,
   }
 
-  const lastMessage = { body: 'Are they still in the case?', created_at: '2026-05-28T10:30:00Z' }
+  const lastMessage = { body: 'Are they still in the case?', image_url: null, created_at: '2026-05-28T10:30:00Z' }
 
   it('maps a ConversationRow to a Conversation with correct otherUser', () => {
     const result = toConversation(convRow, 'aaa-aaa', otherProfile, item, lastMessage, 2)
@@ -63,6 +79,13 @@ describe('toConversation', () => {
     expect(result.otherUser.name).toBe('Jordan Kim')
     expect(result.otherUser.initial).toBe('J')
     expect(result.otherUser.college).toBe('Stevenson')
+    expect(result.otherUser.avatarUrl).toBeUndefined()
+  })
+
+  it('maps the other user avatar_url when present', () => {
+    const withAvatar = { ...otherProfile, avatar_url: 'https://x.supabase.co/a.png' }
+    const result = toConversation(convRow, 'aaa-aaa', withAvatar, item, lastMessage, 0)
+    expect(result.otherUser.avatarUrl).toBe('https://x.supabase.co/a.png')
   })
 
   it('uses the item fields', () => {
@@ -85,6 +108,12 @@ describe('toConversation', () => {
     expect(result.lastMessagePreview).toBe('')
     expect(result.lastMessageAt).toBe(convRow.created_at)
     expect(result.unreadCount).toBe(0)
+  })
+
+  it('shows 📷 Photo preview for image-only messages', () => {
+    const imageOnlyMessage = { body: null, image_url: 'https://x.supabase.co/img.jpg', created_at: '2026-05-28T10:30:00Z' }
+    const result = toConversation(convRow, 'aaa-aaa', otherProfile, item, imageOnlyMessage, 0)
+    expect(result.lastMessagePreview).toBe('📷 Photo')
   })
 
   it('defaults emoji to 📦 when item has no emoji', () => {

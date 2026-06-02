@@ -33,10 +33,15 @@ A complete walkthrough of the codebase for new teammates. Read top to bottom onc
 - Sign up with a `@ucsc.edu` email and create a profile
 - Post listings for items they've lost or found on campus, with optional photos
 - Browse and filter all active listings (search, category, location)
-- Message other users directly about a specific item (still mock — see § 9)
-- Track their own posts and stats via a profile page
+- Message other users directly about a specific item (real-time, Supabase-backed)
+- Track their own posts and stats via a profile page; edit/delete posts, mark
+  items claimed/resolved, edit their profile + avatar, report listings, and view
+  items on a campus map
 
-**Current status (post-Sprint 2):** Auth, items, and image uploads run on a real Supabase backend (Postgres + Auth + Storage). Messaging is still mock data and will be wired up in a future sprint.
+**Current status (post-Sprint 4):** Auth, items, image uploads, real-time
+messaging, item detail/edit/delete, claim-resolve status, profile + avatar
+editing, reporting, map view, and email notifications all run on a real Supabase
+backend (Postgres + Auth + Storage + Realtime).
 
 ---
 
@@ -77,7 +82,8 @@ SlugFound/
 │   │   ├── layout.tsx                 # Sidebar + AuthProvider + UnreadProvider
 │   │   ├── lost/page.tsx              # /lost — server, fetches via listItems()
 │   │   ├── found/page.tsx             # /found — server, fetches via listItems()
-│   │   ├── messages/page.tsx          # /messages?c=id (still mock)
+│   │   ├── items/[id]/                # /items/[id] detail + /edit (US 4.1/4.2)
+│   │   ├── messages/page.tsx          # /messages?c=id (real-time)
 │   │   ├── create/
 │   │   │   ├── page.tsx               # /create?type=lost|found (server)
 │   │   │   └── create-form.tsx        # client form using createItem() action
@@ -96,20 +102,26 @@ SlugFound/
 │   │   ├── items-filter.tsx           # URL-driven search/category/location filter
 │   │   ├── location-map-picker.tsx    # Leaflet map with UCSC preset markers
 │   │   ├── location-map-picker-dynamic.tsx  # next/dynamic SSR wrapper for the map
-│   │   ├── messages/                  # All messaging UI (mock)
+│   │   ├── messages/                  # Real-time messaging UI
+│   │   ├── report-menu.tsx            # Report modal (US 4.6)
+│   │   ├── items-map*.tsx             # Map view + dynamic wrapper (US 4.7)
 │   │   └── ui/badge.tsx               # Pill component
 │   │
 │   └── lib/
 │       ├── supabase/
 │       │   ├── client.ts              # Browser Supabase client
 │       │   ├── server.ts              # SSR Supabase client
+│       │   ├── admin.ts               # Service-role client (email routes)
 │       │   └── proxy.ts               # Session refresh + route guards (used by proxy.ts)
+│       ├── email/                     # Resend wrapper + new-message template
 │       ├── auth-context.tsx           # AuthProvider + useAuth hook
-│       ├── unread-context.tsx         # Mock unread message counts
+│       ├── unread-context.tsx         # Unread message counts (live)
+│       ├── conversations.ts           # Messaging query helpers (server-only)
+│       ├── use-realtime-messages.ts   # Realtime subscription hook
 │       ├── items.ts                   # Items repository (server-only)
+│       ├── item-status.ts / geo.ts / storage.ts  # Pure helpers
 │       ├── definitions.ts             # Shared types + constants
-│       ├── format.ts                  # timeAgo, initialFromName helpers
-│       └── mock-messages.ts           # Mock message data
+│       └── format.ts                  # timeAgo, initialFromName helpers
 │
 ├── proxy.ts                           # Next.js 16 proxy entry (auth + session refresh)
 │
@@ -301,17 +313,19 @@ ItemCategory    = (one of ITEM_CATEGORIES)
 Item {
   id, user_id, type, title, description,
   category, location, status, image_url,
-  emoji, lat, lng, created_at, updated_at,
+  emoji, lat, lng, reported_flag, created_at, updated_at,
   profile?: { id, display_name, avatar_url } | null
 }
 
 Profile {
   id, display_name, email, avatar_url,
-  college, created_at, updated_at
+  college, email_notifications, created_at, updated_at
 }
 
-// Messaging types — still mock data
-MessageUser, ChatMessage, Conversation
+// Messaging types (DB-backed) + DB row shapes
+MessageUser, ChatMessage, Conversation, ConversationRow, MessageRow
+// Reports
+REPORT_REASONS, ReportReason
 ```
 
 Auth-related types (`AuthFormState`, `LoginFormSchema`, `SignupFormSchema`) live with the actions in `app/actions/auth.ts`.
@@ -351,9 +365,9 @@ The location `<select>` was replaced by `<LocationMapPicker>` — an interactive
 
 ### Messages
 
-**Files:** `app/(app)/messages/page.tsx`, `app/components/messages/messages-view.tsx`, all of `app/components/messages/`
+**Files:** `app/(app)/messages/page.tsx`, `app/components/messages/*`, `app/actions/messages.ts`, `app/lib/conversations.ts`, `app/lib/use-realtime-messages.ts`
 
-**Still backed by mock data** in `app/lib/mock-messages.ts`. The URL parameter `?c=<id>` drives which thread is open. The server page reads it and passes `activeId` down. New messages are appended in client state; they don't persist across page refreshes.
+**Backed by Supabase** (`conversations` + `messages` tables, migration 0006). The URL parameter `?c=<id>` drives which thread is open. The server page reads it and passes `activeId` + initial messages down; `use-realtime-messages` subscribes to `postgres_changes` so new messages appear live and persist. `findOrCreateConversation` opens/reuses a conversation (sorting the two ids so `user_a < user_b`).
 
 Wiring messages to Supabase is **out of scope for Sprint 2** and tracked as a future deliverable.
 
@@ -441,11 +455,14 @@ These are real issues, not hypothetical. See [DOCS.md § "Known gaps"](./DOCS.md
 
 **The big ones:**
 
-1. **Item detail pages don't exist** — every card click 404s. Build `app/(app)/lost/[id]/page.tsx` and `app/(app)/found/[id]/page.tsx`.
-2. **Messaging is still mock data** — `app/lib/mock-messages.ts` is hardcoded. A future sprint should add `messages` and `conversations` tables and wire them up.
-3. **No password reset flow** — login form's "Forgot password?" link goes to `#`.
-4. **`AppNav` component is dead code** — `components/app-nav.tsx` is not imported anywhere. Safe to delete.
-5. **Email confirmation is disabled in dev** — re-enable in Supabase dashboard before production.
+1. **Email webhook isn't wired by default** — new-message emails only send once `0010_message_webhook.sql` is applied with a public URL + `NOTIFY_WEBHOOK_SECRET` (US 4.4).
+2. **No password reset flow** — login form's "Forgot password?" link goes to `#`.
+3. **`AppNav` component is dead code** — `components/app-nav.tsx` is not imported anywhere. Safe to delete.
+4. **Email confirmation is disabled in dev** — re-enable in Supabase dashboard before production.
+5. **College preference + "Change password" don't persist** — UI-only affordances on the profile page.
+
+> Item detail pages, real-time messaging, edit/delete, claim/resolve, profile +
+> avatar editing, reporting, and map view all shipped in Sprints 3–4.
 
 ---
 

@@ -12,7 +12,9 @@ import { ITEM_CATEGORIES } from './definitions'
 const toOptionalNumber = (v: unknown) =>
   v === '' || v === null || v === undefined ? undefined : Number(v)
 
-export const CreateItemSchema = z.object({
+// Shared field shape for both create and edit. Editing supports the same fields
+// (title, description, category, location, photo) plus the lost/found type.
+const itemFields = {
   type: z.enum(['lost', 'found']),
   title: z.string().trim().min(1, 'Title is required.').max(120),
   description: z.string().trim().min(1, 'Description is required.').max(1000),
@@ -20,7 +22,12 @@ export const CreateItemSchema = z.object({
   location: z.string().trim().min(1, 'Location is required.'),
   lat: z.preprocess(toOptionalNumber, z.number().min(-90).max(90).optional()),
   lng: z.preprocess(toOptionalNumber, z.number().min(-180).max(180).optional()),
-})
+}
+
+export const CreateItemSchema = z.object(itemFields)
+
+/** Same fields as create; the photo is handled separately and stays optional. */
+export const UpdateItemSchema = z.object(itemFields)
 
 export type CreateItemFormState =
   | {
@@ -36,3 +43,6 @@ export type CreateItemFormState =
       message?: string
     }
   | undefined
+
+/** Edit form returns the same error/message shape as create. */
+export type UpdateItemFormState = CreateItemFormState

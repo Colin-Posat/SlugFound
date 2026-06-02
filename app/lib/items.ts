@@ -11,6 +11,7 @@
  */
 
 import 'server-only'
+import { cache } from 'react'
 import { createSupabaseServerClient } from './supabase/server'
 import type { Item, ItemType } from './definitions'
 
@@ -19,6 +20,7 @@ export interface ListItemsOptions {
   search?: string
   category?: string  // 'All' or undefined → no filter
   location?: string  // empty string or undefined → no filter
+  activeOnly?: boolean // when true, hide claimed/resolved items (US 4.3)
   limit?: number
 }
 
@@ -26,18 +28,29 @@ export interface ListItemsOptions {
  * Fetch items of a given type (lost/found) with optional filters.
  *
  * Joins `profiles` so each item carries the poster's display_name + avatar
- * for rendering on listing cards. Sorted by created_at desc (newest first).
+ * for rendering on listing cards.
+ *
+ * Ordering (US 4.3): active items first, then claimed/resolved. We rely on the
+ * `item_status` enum being defined as ('active','claimed','resolved') — ascending
+ * enum order is exactly active → claimed → resolved. Within each group, newest
+ * first by created_at.
  */
 export async function listItems(opts: ListItemsOptions): Promise<Item[]> {
-  const { type, search, category, location, limit = 100 } = opts
+  const { type, search, category, location, activeOnly, limit = 100 } = opts
   const supabase = await createSupabaseServerClient()
 
   let query = supabase
     .from('items')
     .select('*, profile:profiles(id, display_name, avatar_url)')
     .eq('type', type)
+    .eq('reported_flag', false) // hide items flagged by 3+ reports (US 4.6)
+    .order('status', { ascending: true })
     .order('created_at', { ascending: false })
     .limit(limit)
+
+  if (activeOnly) {
+    query = query.eq('status', 'active')
+  }
 
   // Search across title + description using Postgres ILIKE (case-insensitive).
   // The `or` filter format is: 'col1.ilike.%term%,col2.ilike.%term%'.
@@ -63,8 +76,14 @@ export async function listItems(opts: ListItemsOptions): Promise<Item[]> {
   return (data ?? []) as Item[]
 }
 
-/** Fetch a single item by id (with poster profile joined). */
-export async function getItemById(id: string): Promise<Item | null> {
+/**
+ * Fetch a single item by id (with poster profile joined).
+ *
+ * Wrapped in React `cache()` so that a detail page and its `generateMetadata`
+ * (which both need the item) share a single Supabase query per request.
+ * Supabase calls aren't auto-memoized the way `fetch` is, so we memoize here.
+ */
+export const getItemById = cache(async (id: string): Promise<Item | null> => {
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase
     .from('items')
@@ -77,7 +96,7 @@ export async function getItemById(id: string): Promise<Item | null> {
     return null
   }
   return data as Item
-}
+})
 
 /** Stats used by the Account page (US 2.6). */
 export interface UserItemStats {

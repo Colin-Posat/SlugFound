@@ -17,6 +17,8 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import ItemCard from '@/app/components/item-card'
+import ItemsMapDynamic from '@/app/components/items-map-dynamic'
+import { geotaggedItems } from '@/app/lib/geo'
 import type { Item } from '@/app/lib/definitions'
 
 const CATEGORIES = [
@@ -48,6 +50,9 @@ const LOCATIONS = [
   'Bus Stop',
 ]
 
+const INPUT_CLS =
+  'rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink placeholder-muted outline-none focus:border-gold focus:ring-1 focus:ring-gold'
+
 interface ItemsFilterProps {
   items: Item[]                    // pre-filtered server-side
   type: 'lost' | 'found'
@@ -55,6 +60,7 @@ interface ItemsFilterProps {
   initialSearch: string
   initialCategory: string
   initialLocation: string
+  initialShowAll: boolean          // false → "Active only" (default)
 }
 
 export default function ItemsFilter({
@@ -64,6 +70,7 @@ export default function ItemsFilter({
   initialSearch,
   initialCategory,
   initialLocation,
+  initialShowAll,
 }: ItemsFilterProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -76,16 +83,24 @@ export default function ItemsFilter({
   const [search, setSearch] = useState(initialSearch)
   const [activeCategory, setActiveCategory] = useState(initialCategory || 'All')
   const [activeLocation, setActiveLocation] = useState(initialLocation)
+  const [showAll, setShowAll] = useState(initialShowAll)
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
 
   /**
    * Push new searchParams to the URL. Only includes keys with truthy values
    * so the URL stays clean (e.g. /lost instead of /lost?q=&category=All).
    */
-  const updateUrl = (next: { q?: string; category?: string; location?: string }) => {
+  const updateUrl = (next: {
+    q?: string
+    category?: string
+    location?: string
+    all?: boolean
+  }) => {
     const params = new URLSearchParams()
     if (next.q && next.q.trim()) params.set('q', next.q.trim())
     if (next.category && next.category !== 'All') params.set('category', next.category)
     if (next.location) params.set('location', next.location)
+    if (next.all) params.set('all', '1')
 
     const qs = params.toString()
     const url = qs ? `${pathname}?${qs}` : pathname
@@ -100,7 +115,7 @@ export default function ItemsFilter({
       // Only fire if the search value actually differs from the URL — avoids
       // an extra round-trip on initial mount.
       if (search !== initialSearch) {
-        updateUrl({ q: search, category: activeCategory, location: activeLocation })
+        updateUrl({ q: search, category: activeCategory, location: activeLocation, all: showAll })
       }
     }, 300)
     return () => {
@@ -111,23 +126,31 @@ export default function ItemsFilter({
 
   function handleCategoryClick(cat: string) {
     setActiveCategory(cat)
-    updateUrl({ q: search, category: cat, location: activeLocation })
+    updateUrl({ q: search, category: cat, location: activeLocation, all: showAll })
   }
 
   function handleLocationChange(loc: string) {
     setActiveLocation(loc)
-    updateUrl({ q: search, category: activeCategory, location: loc })
+    updateUrl({ q: search, category: activeCategory, location: loc, all: showAll })
+  }
+
+  function handleToggleActiveOnly() {
+    // Checkbox is "Active only", so toggling it flips showAll.
+    const nextShowAll = !showAll
+    setShowAll(nextShowAll)
+    updateUrl({ q: search, category: activeCategory, location: activeLocation, all: nextShowAll })
   }
 
   function clearFilters() {
     setSearch('')
     setActiveCategory('All')
     setActiveLocation('')
+    setShowAll(false)
     startTransition(() => router.replace(pathname, { scroll: false }))
   }
 
   const hasActiveFilters =
-    search !== '' || activeCategory !== 'All' || activeLocation !== ''
+    search !== '' || activeCategory !== 'All' || activeLocation !== '' || showAll
 
   return (
     <>
@@ -138,12 +161,12 @@ export default function ItemsFilter({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={`Search ${type} items…`}
-          className="flex-1 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400"
+          className={`flex-1 ${INPUT_CLS}`}
         />
         <select
           value={activeLocation}
           onChange={(e) => handleLocationChange(e.target.value)}
-          className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-300 outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400"
+          className={`${INPUT_CLS} text-ink-soft`}
         >
           <option value="">All locations</option>
           {LOCATIONS.map((l) => (
@@ -152,6 +175,16 @@ export default function ItemsFilter({
             </option>
           ))}
         </select>
+        {/* Active-only toggle (default on) — hides claimed/resolved items (US 4.3) */}
+        <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink-soft transition-colors hover:border-line-strong">
+          <input
+            type="checkbox"
+            checked={!showAll}
+            onChange={handleToggleActiveOnly}
+            className="accent-gold"
+          />
+          Active only
+        </label>
       </div>
 
       {/* Category pills */}
@@ -163,8 +196,8 @@ export default function ItemsFilter({
             onClick={() => handleCategoryClick(cat)}
             className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
               activeCategory === cat
-                ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400'
-                : 'border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white'
+                ? 'border-gold bg-gold-soft text-gold-ink'
+                : 'border-line text-ink-soft hover:border-line-strong hover:text-ink'
             }`}
           >
             {cat}
@@ -175,28 +208,66 @@ export default function ItemsFilter({
       {/* Active filter status bar */}
       {hasActiveFilters && (
         <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm text-zinc-500">
+          <p className="font-mono text-xs text-muted">
             {items.length} result{items.length !== 1 ? 's' : ''}
-            {isPending && <span className="ml-2 text-zinc-600">· refreshing…</span>}
+            {isPending && <span className="ml-2">· refreshing…</span>}
           </p>
           <button
             type="button"
             onClick={clearFilters}
-            className="text-xs text-zinc-500 transition-colors hover:text-yellow-400"
+            className="text-xs text-muted transition-colors hover:text-gold-ink"
           >
             Clear filters ×
           </button>
         </div>
       )}
 
-      {/* Empty state */}
-      {items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-zinc-800 py-20 text-center">
+      {/* View toggle + (map) geotag info bar */}
+      <div className="mb-4 flex items-center justify-between gap-3">
+        {viewMode === 'map' ? (
+          <p className="font-mono text-xs text-muted">
+            Showing {geotaggedItems(items).length} of {items.length}{' '}
+            {items.length === 1 ? 'item' : 'items'} on the map
+          </p>
+        ) : (
+          <span />
+        )}
+        <div className="flex shrink-0 rounded-xl border border-line bg-surface p-1">
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+              viewMode === 'list'
+                ? 'bg-gold-soft text-ink'
+                : 'text-muted hover:text-ink'
+            }`}
+          >
+            List
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('map')}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+              viewMode === 'map'
+                ? 'bg-gold-soft text-ink'
+                : 'text-muted hover:text-ink'
+            }`}
+          >
+            Map
+          </button>
+        </div>
+      </div>
+
+      {/* Content: map, empty state, or grid */}
+      {viewMode === 'map' ? (
+        <ItemsMapDynamic items={items} />
+      ) : items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-line-strong py-20 text-center">
           <span className="text-5xl">🔍</span>
-          <p className="text-base font-semibold text-white">
+          <p className="font-display text-lg font-semibold text-ink">
             {hasActiveFilters ? 'No items match your filters' : `No ${type} items yet`}
           </p>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted">
             {hasActiveFilters
               ? 'Try a different keyword, category, or location'
               : 'Be the first to post a listing'}
@@ -206,14 +277,14 @@ export default function ItemsFilter({
               <button
                 type="button"
                 onClick={clearFilters}
-                className="rounded-full border border-zinc-700 px-4 py-2 text-sm text-zinc-400 transition hover:border-zinc-500 hover:text-white"
+                className="rounded-full border border-line-strong px-4 py-2 text-sm text-ink-soft transition hover:border-gold hover:text-ink"
               >
                 Clear filters
               </button>
             )}
             <Link
               href={reportHref}
-              className="rounded-full bg-yellow-400 px-4 py-2 text-sm font-bold text-zinc-950 transition hover:bg-yellow-300"
+              className="rounded-full bg-gold px-4 py-2 text-sm font-bold text-on-gold transition hover:bg-gold-bright"
             >
               {type === 'lost' ? 'Report a lost item' : 'Report a found item'}
             </Link>
@@ -225,8 +296,8 @@ export default function ItemsFilter({
             isPending ? 'opacity-60' : ''
           }`}
         >
-          {items.map((item) => (
-            <ItemCard key={item.id} item={item} />
+          {items.map((item, i) => (
+            <ItemCard key={item.id} item={item} className={`reveal reveal-${(i % 6) + 1}`} />
           ))}
         </div>
       )}

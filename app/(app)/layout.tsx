@@ -31,7 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <AuthProvider initialUser={user} initialProfile={profile}>
       <UnreadProvider initialUnreadCounts={initialUnreadCounts}>
-        <div className="flex min-h-screen bg-zinc-950 text-white">
+        <div className="flex min-h-screen bg-paper text-ink">
           <Sidebar />
           <div className="flex flex-1 flex-col min-w-0 pb-20 md:pb-0">{children}</div>
         </div>
