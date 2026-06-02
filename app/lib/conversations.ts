@@ -19,7 +19,8 @@ export function toChatMessage(row: MessageRow): ChatMessage {
     id: row.id,
     conversationId: row.conversation_id,
     senderId: row.sender_id,
-    body: row.body,
+    body: row.body ?? '',
+    imageUrl: row.image_url ?? undefined,
     sentAt: row.created_at,
   }
 }

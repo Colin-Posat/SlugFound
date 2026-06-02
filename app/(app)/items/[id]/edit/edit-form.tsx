@@ -22,10 +22,10 @@ import LocationMapPicker, {
 } from '@/app/components/location-map-picker-dynamic'
 
 const INPUT_CLS =
-  'rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none transition focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400'
+  'rounded-xl border border-line-strong bg-surface-2 px-4 py-2.5 text-sm text-ink placeholder-muted outline-none transition focus:border-gold focus:ring-1 focus:ring-gold'
 
 const SELECT_CLS =
-  'rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-zinc-300 outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400'
+  'rounded-xl border border-line-strong bg-surface-2 px-4 py-2.5 text-sm text-ink-soft outline-none focus:border-gold focus:ring-1 focus:ring-gold'
 
 interface EditFormProps {
   item: Item
@@ -80,25 +80,25 @@ export default function EditForm({ item }: EditFormProps) {
       <div className="mb-8">
         <Link
           href={backHref}
-          className="mb-4 inline-flex items-center gap-1.5 text-sm text-zinc-600 transition-colors hover:text-zinc-300"
+          className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink"
         >
           ← Back to listing
         </Link>
-        <h1 className="text-3xl font-bold text-white">Edit listing</h1>
-        <p className="mt-1 text-sm text-zinc-400">Update your post or remove it entirely.</p>
+        <h1 className="text-3xl font-bold text-ink">Edit listing</h1>
+        <p className="mt-1 text-sm text-muted">Update your post or remove it entirely.</p>
       </div>
 
       <form action={action} className="flex flex-col gap-5">
         {/* Lost / found toggle */}
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-          <h2 className="mb-4 text-sm font-semibold text-white">Listing type</h2>
+        <div className="rounded-2xl border border-line bg-surface p-6">
+          <h2 className="mb-4 text-sm font-semibold text-ink">Listing type</h2>
           <input type="hidden" name="type" value={type} />
-          <div className="flex rounded-xl border border-zinc-700 bg-zinc-950 p-1">
+          <div className="flex rounded-xl border border-line-strong bg-paper p-1">
             <button
               type="button"
               onClick={() => setType('lost')}
               className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${
-                type === 'lost' ? 'bg-red-500/20 text-red-400' : 'text-zinc-500 hover:text-zinc-300'
+                type === 'lost' ? 'bg-lost-soft text-lost' : 'text-muted hover:text-ink'
               }`}
             >
               Lost
@@ -108,8 +108,8 @@ export default function EditForm({ item }: EditFormProps) {
               onClick={() => setType('found')}
               className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${
                 type === 'found'
-                  ? 'bg-green-500/20 text-green-400'
-                  : 'text-zinc-500 hover:text-zinc-300'
+                  ? 'bg-found-soft text-found'
+                  : 'text-muted hover:text-ink'
               }`}
             >
               Found
@@ -118,12 +118,12 @@ export default function EditForm({ item }: EditFormProps) {
         </div>
 
         {/* About the item */}
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-          <h2 className="mb-5 text-sm font-semibold text-white">About the item</h2>
+        <div className="rounded-2xl border border-line bg-surface p-6">
+          <h2 className="mb-5 text-sm font-semibold text-ink">About the item</h2>
 
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="title" className="text-sm font-medium text-zinc-300">
+              <label htmlFor="title" className="text-sm font-medium text-ink-soft">
                 Item name
               </label>
               <input
@@ -136,12 +136,12 @@ export default function EditForm({ item }: EditFormProps) {
                 className={INPUT_CLS}
               />
               {state?.errors?.title && (
-                <p className="text-xs text-red-400">{state.errors.title[0]}</p>
+                <p className="text-xs text-lost">{state.errors.title[0]}</p>
               )}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="category" className="text-sm font-medium text-zinc-300">
+              <label htmlFor="category" className="text-sm font-medium text-ink-soft">
                 Category
               </label>
               <select
@@ -162,13 +162,13 @@ export default function EditForm({ item }: EditFormProps) {
                 ))}
               </select>
               {state?.errors?.category && (
-                <p className="text-xs text-red-400">{state.errors.category[0]}</p>
+                <p className="text-xs text-lost">{state.errors.category[0]}</p>
               )}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-zinc-300">Location on campus</label>
-              <p className="text-xs text-zinc-500">
+              <label className="text-sm font-medium text-ink-soft">Location on campus</label>
+              <p className="text-xs text-muted">
                 Click a preset marker or tap the map to move the pin.
               </p>
 
@@ -185,19 +185,19 @@ export default function EditForm({ item }: EditFormProps) {
               <LocationMapPicker value={mapLocation} onChange={setMapLocation} />
 
               {mapLocation && (
-                <p className="text-xs text-yellow-400">
+                <p className="text-xs text-gold-ink">
                   📍 {mapLocation.label}
                   {mapLocation.label === 'Other' &&
                     ` (${mapLocation.lat.toFixed(5)}, ${mapLocation.lng.toFixed(5)})`}
                 </p>
               )}
               {state?.errors?.location && (
-                <p className="text-xs text-red-400">{state.errors.location[0]}</p>
+                <p className="text-xs text-lost">{state.errors.location[0]}</p>
               )}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="description" className="text-sm font-medium text-zinc-300">
+              <label htmlFor="description" className="text-sm font-medium text-ink-soft">
                 Description
               </label>
               <textarea
@@ -210,28 +210,28 @@ export default function EditForm({ item }: EditFormProps) {
                 className={`resize-none ${INPUT_CLS}`}
               />
               {state?.errors?.description && (
-                <p className="text-xs text-red-400">{state.errors.description[0]}</p>
+                <p className="text-xs text-lost">{state.errors.description[0]}</p>
               )}
             </div>
           </div>
         </div>
 
         {/* Photo */}
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-          <h2 className="mb-1 text-sm font-semibold text-white">
-            Photo <span className="font-normal text-zinc-600">(optional)</span>
+        <div className="rounded-2xl border border-line bg-surface p-6">
+          <h2 className="mb-1 text-sm font-semibold text-ink">
+            Photo <span className="font-normal text-muted">(optional)</span>
           </h2>
-          <p className="mb-4 text-xs text-zinc-500">
+          <p className="mb-4 text-xs text-muted">
             Upload a new photo to replace the current one. Max 5 MB · JPG, PNG, WebP.
           </p>
 
           {selectedFile ? (
-            <div className="flex items-center justify-between rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3">
+            <div className="flex items-center justify-between rounded-xl border border-line-strong bg-surface-2 px-4 py-3">
               <div className="flex items-center gap-3">
                 <span className="text-2xl">🖼️</span>
                 <div>
-                  <p className="text-sm font-medium text-white">{selectedFile.name}</p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-sm font-medium text-ink">{selectedFile.name}</p>
+                  <p className="text-xs text-muted">
                     {(selectedFile.size / 1024).toFixed(0)} KB · new
                   </p>
                 </div>
@@ -239,7 +239,7 @@ export default function EditForm({ item }: EditFormProps) {
               <button
                 type="button"
                 onClick={() => setSelectedFile(null)}
-                className="text-sm text-zinc-600 transition-colors hover:text-red-400"
+                className="text-sm text-muted transition-colors hover:text-lost"
               >
                 Remove
               </button>
@@ -250,11 +250,11 @@ export default function EditForm({ item }: EditFormProps) {
               <img
                 src={item.image_url}
                 alt={item.title}
-                className="h-16 w-16 rounded-xl border border-zinc-700 object-cover"
+                className="h-16 w-16 rounded-xl border border-line-strong object-cover"
               />
               <label
                 htmlFor="photo"
-                className="cursor-pointer rounded-full border border-zinc-700 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-500 hover:text-white"
+                className="cursor-pointer rounded-full border border-line-strong px-4 py-2 text-sm text-ink-soft transition hover:border-gold hover:text-ink"
               >
                 Replace photo
               </label>
@@ -262,11 +262,11 @@ export default function EditForm({ item }: EditFormProps) {
           ) : (
             <label
               htmlFor="photo"
-              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-700 bg-zinc-950 py-10 text-center transition hover:border-yellow-400/50 hover:bg-zinc-900"
+              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-line-strong bg-paper py-10 text-center transition hover:border-gold hover:bg-surface-2"
             >
               <span className="text-3xl">📷</span>
-              <span className="text-sm text-zinc-400">Click to upload a photo</span>
-              <span className="text-xs text-zinc-600">PNG, JPG, WebP up to 5 MB</span>
+              <span className="text-sm text-muted">Click to upload a photo</span>
+              <span className="text-xs text-muted">PNG, JPG, WebP up to 5 MB</span>
             </label>
           )}
 
@@ -280,7 +280,7 @@ export default function EditForm({ item }: EditFormProps) {
           />
 
           {state?.errors?.photo && (
-            <p className="mt-2 text-xs text-red-400">{state.errors.photo[0]}</p>
+            <p className="mt-2 text-xs text-lost">{state.errors.photo[0]}</p>
           )}
         </div>
 
@@ -289,11 +289,11 @@ export default function EditForm({ item }: EditFormProps) {
           <button
             type="submit"
             disabled={pending}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-yellow-400 py-2.5 text-sm font-bold text-zinc-950 transition hover:bg-yellow-300 disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-gold py-2.5 text-sm font-bold text-on-gold transition hover:bg-gold-bright disabled:opacity-50"
           >
             {pending ? (
               <>
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-950 border-t-transparent" />
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-ink border-t-transparent" />
                 Saving…
               </>
             ) : (
@@ -302,14 +302,14 @@ export default function EditForm({ item }: EditFormProps) {
           </button>
           <Link
             href={backHref}
-            className="flex items-center justify-center rounded-full border border-zinc-700 px-5 text-sm font-medium text-zinc-400 transition hover:border-zinc-500 hover:text-white"
+            className="flex items-center justify-center rounded-full border border-line-strong px-5 text-sm font-medium text-muted transition hover:border-gold hover:text-ink"
           >
             Cancel
           </Link>
           <button
             type="button"
             onClick={() => setShowDeleteModal(true)}
-            className="flex items-center justify-center rounded-full border border-red-500/30 px-5 py-2.5 text-sm font-medium text-red-400 transition hover:border-red-500/60 hover:text-red-300"
+            className="flex items-center justify-center rounded-full border border-lost/30 px-5 py-2.5 text-sm font-medium text-lost transition hover:border-lost/60 hover:text-lost"
           >
             Delete
           </button>
@@ -319,9 +319,9 @@ export default function EditForm({ item }: EditFormProps) {
       {/* Delete confirmation modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl">
-            <h3 className="text-lg font-bold text-white">Delete this listing?</h3>
-            <p className="mt-2 text-sm text-zinc-400">
+          <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-ink">Delete this listing?</h3>
+            <p className="mt-2 text-sm text-muted">
               Are you sure? This cannot be undone.
             </p>
             <div className="mt-6 flex gap-3">
@@ -329,7 +329,7 @@ export default function EditForm({ item }: EditFormProps) {
                 type="button"
                 disabled={isDeleting}
                 onClick={handleDelete}
-                className="flex flex-1 items-center justify-center gap-2 rounded-full bg-red-500 py-2.5 text-sm font-bold text-white transition hover:bg-red-400 disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-2 rounded-full bg-lost py-2.5 text-sm font-bold text-white transition hover:bg-lost/90 disabled:opacity-50"
               >
                 {isDeleting ? 'Deleting…' : 'Delete'}
               </button>
@@ -337,7 +337,7 @@ export default function EditForm({ item }: EditFormProps) {
                 type="button"
                 disabled={isDeleting}
                 onClick={() => setShowDeleteModal(false)}
-                className="flex-1 rounded-full border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-white disabled:opacity-50"
+                className="flex-1 rounded-full border border-line-strong py-2.5 text-sm font-medium text-ink-soft transition hover:border-gold hover:text-ink disabled:opacity-50"
               >
                 Cancel
               </button>

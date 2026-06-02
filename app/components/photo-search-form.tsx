@@ -75,7 +75,7 @@ export default function PhotoSearchForm() {
       <form onSubmit={handleSubmit} className="mb-8">
         <label
           htmlFor="photo-upload"
-          className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-zinc-700 bg-zinc-900 p-10 text-center transition hover:border-yellow-400/50 hover:bg-zinc-800/50"
+          className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-line-strong bg-surface p-10 text-center transition hover:border-gold hover:bg-surface-2"
         >
           {preview ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -87,10 +87,10 @@ export default function PhotoSearchForm() {
           ) : (
             <>
               <span className="text-5xl">📷</span>
-              <p className="text-sm font-medium text-zinc-300">
+              <p className="text-sm font-medium text-ink-soft">
                 Click to upload a photo of your lost item
               </p>
-              <p className="text-xs text-zinc-600">JPG, PNG, or WebP · max 5 MB</p>
+              <p className="text-xs text-muted">JPG, PNG, or WebP · max 5 MB</p>
             </>
           )}
           <input
@@ -109,14 +109,14 @@ export default function PhotoSearchForm() {
             <button
               type="submit"
               disabled={status === 'loading'}
-              className="flex-1 rounded-full bg-yellow-400 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex-1 rounded-full bg-gold py-2.5 text-sm font-semibold text-on-gold transition hover:bg-gold-bright disabled:cursor-not-allowed disabled:opacity-60"
             >
               {status === 'loading' ? 'Analyzing image…' : 'Search by Photo'}
             </button>
             <button
               type="button"
               onClick={reset}
-              className="rounded-full border border-zinc-700 px-4 py-2.5 text-sm text-zinc-400 transition hover:border-zinc-500 hover:text-white"
+              className="rounded-full border border-line-strong px-4 py-2.5 text-sm text-ink-soft transition hover:border-gold hover:text-ink"
             >
               Clear
             </button>
@@ -127,14 +127,14 @@ export default function PhotoSearchForm() {
       {/* Loading spinner */}
       {status === 'loading' && (
         <div className="flex flex-col items-center gap-3 py-16 text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-yellow-400 border-t-transparent" />
-          <p className="text-sm text-zinc-400">Analyzing your photo with AI…</p>
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent" />
+          <p className="text-sm text-muted">Analyzing your photo with AI…</p>
         </div>
       )}
 
       {/* Error */}
       {status === 'error' && (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-5 py-4 text-sm text-red-400">
+        <div className="rounded-xl border border-lost/25 bg-lost-soft px-5 py-4 text-sm text-lost">
           {errorMsg}
         </div>
       )}
@@ -143,22 +143,22 @@ export default function PhotoSearchForm() {
       {status === 'done' && (
         <>
           {results.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-zinc-800 py-20 text-center">
+            <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-line-strong py-20 text-center">
               <span className="text-5xl">🔍</span>
-              <p className="text-base font-semibold text-white">No matching items found</p>
-              <p className="text-sm text-zinc-500">
+              <p className="font-display text-lg font-semibold text-ink">No matching items found</p>
+              <p className="text-sm text-muted">
                 Try a clearer photo or browse all found items below
               </p>
               <Link
                 href="/found"
-                className="mt-2 rounded-full border border-zinc-700 px-4 py-2 text-sm text-zinc-400 transition hover:border-zinc-500 hover:text-white"
+                className="mt-2 rounded-full border border-line-strong px-4 py-2 text-sm text-ink-soft transition hover:border-gold hover:text-ink"
               >
                 Browse all found items
               </Link>
             </div>
           ) : (
             <>
-              <p className="mb-4 text-sm text-zinc-500">
+              <p className="mb-4 font-mono text-xs text-muted">
                 {results.length} matching item{results.length !== 1 ? 's' : ''} found · ranked by
                 similarity
               </p>

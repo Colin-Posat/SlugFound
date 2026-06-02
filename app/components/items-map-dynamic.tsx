@@ -7,8 +7,8 @@ import dynamic from 'next/dynamic'
 const ItemsMap = dynamic(() => import('./items-map'), {
   ssr: false,
   loading: () => (
-    <div className="flex h-[500px] w-full animate-pulse items-center justify-center rounded-xl border border-zinc-700 bg-zinc-800 md:h-[600px]">
-      <span className="text-sm text-zinc-500">Loading map…</span>
+    <div className="flex h-[500px] w-full animate-pulse items-center justify-center rounded-xl border border-line-strong bg-surface-2 md:h-[600px]">
+      <span className="text-sm text-muted">Loading map…</span>
     </div>
   ),
 })

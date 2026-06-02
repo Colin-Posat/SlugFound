@@ -40,7 +40,7 @@ export default function ItemsMap({ items }: ItemsMapProps) {
       center={[UCSC_CENTER[0], UCSC_CENTER[1]]}
       zoom={UCSC_ZOOM}
       scrollWheelZoom
-      className="h-[500px] w-full rounded-xl border border-zinc-700 md:h-[600px]"
+      className="h-[500px] w-full rounded-xl border border-line-strong md:h-[600px]"
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -59,17 +59,17 @@ export default function ItemsMap({ items }: ItemsMapProps) {
                   className="mb-2 h-24 w-full rounded object-cover"
                 />
               ) : (
-                <div className="mb-2 flex h-24 w-full items-center justify-center rounded bg-zinc-100 text-3xl">
+                <div className="mb-2 flex h-24 w-full items-center justify-center rounded bg-surface-2 text-3xl">
                   {item.emoji ?? '📦'}
                 </div>
               )}
-              <p className="text-sm font-semibold text-zinc-900">{item.title}</p>
-              <p className="text-xs text-zinc-500">
+              <p className="font-display text-sm font-semibold text-ink">{item.title}</p>
+              <p className="font-mono text-xs text-muted">
                 {item.category} · {timeAgo(item.created_at)}
               </p>
               <Link
                 href={`/items/${item.id}`}
-                className="mt-1 inline-block text-xs font-semibold text-yellow-600 underline"
+                className="mt-1 inline-block text-xs font-semibold text-gold-ink underline"
               >
                 View item →
               </Link>

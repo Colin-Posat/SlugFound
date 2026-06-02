@@ -24,10 +24,10 @@ export default function ConversationList({
   )
 
   return (
-    <div className="flex w-full shrink-0 flex-col overflow-hidden border-r border-zinc-800 md:w-80">
+    <div className="flex w-full shrink-0 flex-col overflow-hidden border-r border-line md:w-80">
       {/* Header */}
-      <div className="shrink-0 border-b border-zinc-800 px-4 py-3">
-        <h2 className="text-base font-bold text-white">Messages</h2>
+      <div className="shrink-0 border-b border-line px-4 py-3">
+        <h2 className="font-display text-lg font-bold text-ink">Messages</h2>
       </div>
 
       {/* Search */}
@@ -37,14 +37,14 @@ export default function ConversationList({
           placeholder="Search conversations…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400"
+          className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink placeholder-muted outline-none focus:border-gold focus:ring-1 focus:ring-gold"
         />
       </div>
 
       {/* List */}
       <div className="flex-1 overflow-y-auto px-2 pb-3">
         {filtered.length === 0 ? (
-          <p className="px-3 py-6 text-center text-sm text-zinc-600">
+          <p className="px-3 py-6 text-center text-sm text-muted">
             No conversations found
           </p>
         ) : (

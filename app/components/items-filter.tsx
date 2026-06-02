@@ -50,6 +50,9 @@ const LOCATIONS = [
   'Bus Stop',
 ]
 
+const INPUT_CLS =
+  'rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink placeholder-muted outline-none focus:border-gold focus:ring-1 focus:ring-gold'
+
 interface ItemsFilterProps {
   items: Item[]                    // pre-filtered server-side
   type: 'lost' | 'found'
@@ -158,12 +161,12 @@ export default function ItemsFilter({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={`Search ${type} items…`}
-          className="flex-1 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400"
+          className={`flex-1 ${INPUT_CLS}`}
         />
         <select
           value={activeLocation}
           onChange={(e) => handleLocationChange(e.target.value)}
-          className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-300 outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400"
+          className={`${INPUT_CLS} text-ink-soft`}
         >
           <option value="">All locations</option>
           {LOCATIONS.map((l) => (
@@ -173,12 +176,12 @@ export default function ItemsFilter({
           ))}
         </select>
         {/* Active-only toggle (default on) — hides claimed/resolved items (US 4.3) */}
-        <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-300 transition-colors hover:border-zinc-500">
+        <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-ink-soft transition-colors hover:border-line-strong">
           <input
             type="checkbox"
             checked={!showAll}
             onChange={handleToggleActiveOnly}
-            className="accent-yellow-400"
+            className="accent-gold"
           />
           Active only
         </label>
@@ -193,8 +196,8 @@ export default function ItemsFilter({
             onClick={() => handleCategoryClick(cat)}
             className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
               activeCategory === cat
-                ? 'border-yellow-400 bg-yellow-400/10 text-yellow-400'
-                : 'border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white'
+                ? 'border-gold bg-gold-soft text-gold-ink'
+                : 'border-line text-ink-soft hover:border-line-strong hover:text-ink'
             }`}
           >
             {cat}
@@ -205,14 +208,14 @@ export default function ItemsFilter({
       {/* Active filter status bar */}
       {hasActiveFilters && (
         <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm text-zinc-500">
+          <p className="font-mono text-xs text-muted">
             {items.length} result{items.length !== 1 ? 's' : ''}
-            {isPending && <span className="ml-2 text-zinc-600">· refreshing…</span>}
+            {isPending && <span className="ml-2">· refreshing…</span>}
           </p>
           <button
             type="button"
             onClick={clearFilters}
-            className="text-xs text-zinc-500 transition-colors hover:text-yellow-400"
+            className="text-xs text-muted transition-colors hover:text-gold-ink"
           >
             Clear filters ×
           </button>
@@ -222,21 +225,21 @@ export default function ItemsFilter({
       {/* View toggle + (map) geotag info bar */}
       <div className="mb-4 flex items-center justify-between gap-3">
         {viewMode === 'map' ? (
-          <p className="text-sm text-zinc-500">
+          <p className="font-mono text-xs text-muted">
             Showing {geotaggedItems(items).length} of {items.length}{' '}
             {items.length === 1 ? 'item' : 'items'} on the map
           </p>
         ) : (
           <span />
         )}
-        <div className="flex shrink-0 rounded-xl border border-zinc-700 bg-zinc-900 p-1">
+        <div className="flex shrink-0 rounded-xl border border-line bg-surface p-1">
           <button
             type="button"
             onClick={() => setViewMode('list')}
             className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
               viewMode === 'list'
-                ? 'bg-zinc-800 text-white'
-                : 'text-zinc-500 hover:text-zinc-300'
+                ? 'bg-gold-soft text-ink'
+                : 'text-muted hover:text-ink'
             }`}
           >
             List
@@ -246,8 +249,8 @@ export default function ItemsFilter({
             onClick={() => setViewMode('map')}
             className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
               viewMode === 'map'
-                ? 'bg-zinc-800 text-white'
-                : 'text-zinc-500 hover:text-zinc-300'
+                ? 'bg-gold-soft text-ink'
+                : 'text-muted hover:text-ink'
             }`}
           >
             Map
@@ -259,12 +262,12 @@ export default function ItemsFilter({
       {viewMode === 'map' ? (
         <ItemsMapDynamic items={items} />
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-zinc-800 py-20 text-center">
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-line-strong py-20 text-center">
           <span className="text-5xl">🔍</span>
-          <p className="text-base font-semibold text-white">
+          <p className="font-display text-lg font-semibold text-ink">
             {hasActiveFilters ? 'No items match your filters' : `No ${type} items yet`}
           </p>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted">
             {hasActiveFilters
               ? 'Try a different keyword, category, or location'
               : 'Be the first to post a listing'}
@@ -274,14 +277,14 @@ export default function ItemsFilter({
               <button
                 type="button"
                 onClick={clearFilters}
-                className="rounded-full border border-zinc-700 px-4 py-2 text-sm text-zinc-400 transition hover:border-zinc-500 hover:text-white"
+                className="rounded-full border border-line-strong px-4 py-2 text-sm text-ink-soft transition hover:border-gold hover:text-ink"
               >
                 Clear filters
               </button>
             )}
             <Link
               href={reportHref}
-              className="rounded-full bg-yellow-400 px-4 py-2 text-sm font-bold text-zinc-950 transition hover:bg-yellow-300"
+              className="rounded-full bg-gold px-4 py-2 text-sm font-bold text-on-gold transition hover:bg-gold-bright"
             >
               {type === 'lost' ? 'Report a lost item' : 'Report a found item'}
             </Link>
@@ -293,8 +296,8 @@ export default function ItemsFilter({
             isPending ? 'opacity-60' : ''
           }`}
         >
-          {items.map((item) => (
-            <ItemCard key={item.id} item={item} />
+          {items.map((item, i) => (
+            <ItemCard key={item.id} item={item} className={`reveal reveal-${(i % 6) + 1}`} />
           ))}
         </div>
       )}

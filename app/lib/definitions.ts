@@ -78,7 +78,8 @@ export type ChatMessage = {
   id: string
   conversationId: string
   senderId: string
-  body: string
+  body: string        // empty string for image-only messages (UI layer)
+  imageUrl?: string   // Supabase Storage public URL for a photo attachment
   sentAt: string
 }
 
@@ -111,7 +112,8 @@ export type MessageRow = {
   id: string
   conversation_id: string
   sender_id: string
-  body: string
+  body: string | null   // nullable — image-only messages have no text body
+  image_url: string | null
   created_at: string
 }
 
@@ -128,21 +130,23 @@ export type ReportReason = (typeof REPORT_REASONS)[number]['value']
 
 // ─── Campus locations (used by Create form + filters) ───────────────────────
 
+// Coordinates sourced from OpenStreetMap (Nominatim) — the same data behind the
+// map tiles — so pins line up with the labelled buildings on the map.
 export const UCSC_PRESET_LOCATIONS = [
-  { label: 'McHenry Library',              lat: 36.9996, lng: -122.0579 },
-  { label: 'Science & Engineering Library', lat: 37.0002, lng: -122.0626 },
-  { label: 'Baskin Engineering',            lat: 37.0000, lng: -122.0643 },
-  { label: 'Cowell College',                lat: 36.9987, lng: -122.0562 },
-  { label: 'Stevenson College',             lat: 36.9976, lng: -122.0569 },
-  { label: 'Crown College',                 lat: 37.0004, lng: -122.0596 },
-  { label: 'Merrill College',               lat: 36.9990, lng: -122.0608 },
-  { label: 'Kresge College',                lat: 37.0014, lng: -122.0638 },
-  { label: 'Porter College',                lat: 37.0030, lng: -122.0657 },
-  { label: 'Oakes College',                 lat: 36.9944, lng: -122.0620 },
-  { label: 'Rachel Carson College',         lat: 36.9958, lng: -122.0638 },
-  { label: 'Quarry Plaza',                  lat: 36.9996, lng: -122.0603 },
-  { label: 'Dining Hall',                   lat: 36.9993, lng: -122.0572 },
-  { label: 'Bus Stop',                      lat: 36.9985, lng: -122.0558 },
+  { label: 'McHenry Library',               lat: 36.9954, lng: -122.0590 },
+  { label: 'Science & Engineering Library', lat: 36.9991, lng: -122.0608 },
+  { label: 'Baskin Engineering',            lat: 37.0004, lng: -122.0632 },
+  { label: 'Cowell College',                lat: 36.9969, lng: -122.0540 },
+  { label: 'Stevenson College',             lat: 36.9970, lng: -122.0519 },
+  { label: 'Crown College',                 lat: 36.9999, lng: -122.0548 },
+  { label: 'Merrill College',               lat: 37.0001, lng: -122.0531 },
+  { label: 'Kresge College',                lat: 36.9980, lng: -122.0659 },
+  { label: 'Porter College',                lat: 36.9944, lng: -122.0653 },
+  { label: 'Oakes College',                 lat: 36.9901, lng: -122.0630 },
+  { label: 'Rachel Carson College',         lat: 36.9914, lng: -122.0649 },
+  { label: 'Quarry Plaza',                  lat: 36.9978, lng: -122.0556 },
+  { label: 'Dining Hall',                   lat: 36.9966, lng: -122.0535 },
+  { label: 'Bus Stop',                      lat: 36.9973, lng: -122.0561 },
 ] as const
 
 export type UcscPresetLocation = (typeof UCSC_PRESET_LOCATIONS)[number]

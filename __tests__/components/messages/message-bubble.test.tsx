@@ -23,15 +23,15 @@ describe('MessageBubble', () => {
     expect(timeEl).toBeInTheDocument()
   })
 
-  it('applies yellow background for own messages', () => {
+  it('applies the gold accent background for own messages', () => {
     const { container } = render(<MessageBubble message={MESSAGE} isOwn={true} />)
-    const bubble = container.querySelector('.bg-yellow-400')
+    const bubble = container.querySelector('.bg-gold')
     expect(bubble).toBeInTheDocument()
   })
 
-  it('applies dark background for other messages', () => {
+  it('applies the surface background for other messages', () => {
     const { container } = render(<MessageBubble message={MESSAGE} isOwn={false} />)
-    const bubble = container.querySelector('.bg-zinc-800')
+    const bubble = container.querySelector('.bg-surface')
     expect(bubble).toBeInTheDocument()
   })
 })

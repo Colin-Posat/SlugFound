@@ -1,19 +1,194 @@
 @import "tailwindcss";
 
-:root {
-  --background: #0a0a0a;
-  --foreground: #fafafa;
+/* Class-based dark mode: `dark:` variants respond to a .dark class on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================================
+   SlugFound — "Lost & Found Bulletin" theme
+   Warm, light, editorial. Semantic tokens drive the whole app; components use
+   bg-paper / bg-surface / text-ink / text-muted / border-line / bg-gold etc.
+   Dark mode (below) re-themes by overriding the same token values under .dark.
+   ============================================================================ */
+
+@theme {
+  /* Surfaces */
+  --color-paper: #faf6ec;        /* page background (warm cream) */
+  --color-surface: #fffdf7;      /* cards / panels */
+  --color-surface-2: #f1e9d8;    /* insets, hovers, image placeholders */
+  --color-line: #e7ddc8;         /* default borders */
+  --color-line-strong: #d6cab0;  /* hover / focus borders */
+
+  /* Ink (text) — deep navy primary, warm grays for the rest */
+  --color-ink: #1b2435;
+  --color-ink-soft: #4a5160;
+  --color-muted: #8a8678;
+
+  /* UCSC gold accent */
+  --color-gold: #eab308;
+  --color-gold-bright: #f6c945;  /* hover */
+  --color-gold-soft: #f7e7b3;    /* tinted fills */
+  --color-gold-ink: #946811;     /* gold used as readable text/links on cream */
+  /* Always-dark text for solid gold buttons — fixed across light & dark so it
+     stays readable on the gold fill (ink flips to light in dark mode). */
+  --color-on-gold: #1b2435;
+
+  /* Status (lost / found / claimed / resolved) */
+  --color-lost: #b23a48;
+  --color-lost-soft: #f3dcdc;
+  --color-found: #2f7d4f;
+  --color-found-soft: #d9eade;
+  --color-claimed: #3a5ba0;
+  --color-claimed-soft: #dde4f1;
+  --color-resolved: #9a6b11;
+  --color-resolved-soft: #f7e7b3;
 }
 
+/* Fonts come from next/font (runtime CSS vars), so map them inline. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-hanken);
+  --font-mono: var(--font-jetbrains);
 }
 
+/* ---------------------------------------------------------------------------
+   Dark mode — warm near-black "after-hours bulletin board".
+   Overrides the same tokens, so every bg-paper/text-ink/etc. re-themes at once.
+   (--color-on-gold is intentionally NOT overridden — gold buttons stay dark.)
+   --------------------------------------------------------------------------- */
+.dark {
+  --color-paper: #15140f;
+  --color-surface: #1e1c16;
+  --color-surface-2: #2a2720;
+  --color-line: #36322a;
+  --color-line-strong: #4a4538;
+
+  --color-ink: #f4ecd8;
+  --color-ink-soft: #c6bca6;
+  --color-muted: #938b79;
+
+  --color-gold: #f0bd2e;
+  --color-gold-bright: #f8d05a;
+  --color-gold-soft: #3a3015;
+  --color-gold-ink: #e9c873;
+
+  --color-lost: #e0707c;
+  --color-lost-soft: #3a2125;
+  --color-found: #5cbf86;
+  --color-found-soft: #18301f;
+  --color-claimed: #84a6e6;
+  --color-claimed-soft: #1c2742;
+  --color-resolved: #e9c873;
+  --color-resolved-soft: #3a3015;
+}
+
+/* ---------------------------------------------------------------------------
+   Base
+   --------------------------------------------------------------------------- */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  background-color: var(--color-paper);
+  /* Subtle paper grain — tiled SVG noise behind all content. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+  color: var(--color-ink);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Display font for major headings (components opt in with `font-display` too). */
+h1,
+h2 {
+  font-family: var(--font-display), Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+/* ---------------------------------------------------------------------------
+   Motion — staggered page-load reveals (no JS)
+   --------------------------------------------------------------------------- */
+@keyframes bulletin-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal {
+  animation: bulletin-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Stagger helpers — apply alongside .reveal on grid/list items. */
+.reveal-1 { animation-delay: 0.04s; }
+.reveal-2 { animation-delay: 0.08s; }
+.reveal-3 { animation-delay: 0.12s; }
+.reveal-4 { animation-delay: 0.16s; }
+.reveal-5 { animation-delay: 0.20s; }
+.reveal-6 { animation-delay: 0.24s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Bulletin motifs
+   --------------------------------------------------------------------------- */
+
+/* Ticket-stub badge: notched left/right edges punched out of the fill. */
+.ticket {
+  -webkit-mask-image:
+    radial-gradient(circle at left center, transparent 3px, #000 3.5px),
+    radial-gradient(circle at right center, transparent 3px, #000 3.5px);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    radial-gradient(circle at left center, transparent 3px, #000 3.5px),
+    radial-gradient(circle at right center, transparent 3px, #000 3.5px);
+  mask-composite: intersect;
+}
+
+/* Rubber-stamp look for claimed/resolved overlays. */
+.stamp {
+  font-family: var(--font-display), Georgia, serif;
+  border: 2px solid currentColor;
+  border-radius: 0.5rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transform: rotate(-8deg);
+  opacity: 0.85;
+}
+
+/* Index-card "tab" — a little folder tab on the top edge of a card. */
+.card-tab::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 22px;
+  width: 44px;
+  height: 8px;
+  border-radius: 4px 4px 0 0;
+  background: var(--color-gold);
+}
+
+/* Hand-drawn-ish ruled underline used under titles. */
+.ruled {
+  border-bottom: 1px dashed var(--color-line-strong);
+}
+
+/* Leaflet popups: match the bulletin surface instead of stock white. */
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--color-surface) !important;
+  color: var(--color-ink) !important;
+  border: 1px solid var(--color-line) !important;
+  box-shadow: 0 8px 24px rgb(27 36 53 / 0.14) !important;
+}
+.leaflet-container {
+  font-family: var(--font-sans), sans-serif !important;
+}
+
+/* Darken the OSM tiles in dark mode so the map fits the theme. Markers and
+   popups live in separate panes and keep their normal colors. */
+.dark .leaflet-tile {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
 }

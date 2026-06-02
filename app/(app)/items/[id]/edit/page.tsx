@@ -30,13 +30,13 @@ export default async function EditItemPage({ params }: PageProps) {
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-col items-center justify-center gap-4 px-4 py-24 text-center">
         <span className="text-6xl">🔒</span>
-        <h1 className="text-2xl font-bold text-white">403 — Not your listing</h1>
-        <p className="max-w-sm text-sm text-zinc-400">
+        <h1 className="text-2xl font-bold text-ink">403 — Not your listing</h1>
+        <p className="max-w-sm text-sm text-muted">
           You can only edit listings that you posted.
         </p>
         <Link
           href={`/items/${id}`}
-          className="mt-2 rounded-full bg-yellow-400 px-5 py-2.5 text-sm font-bold text-zinc-950 transition hover:bg-yellow-300"
+          className="mt-2 rounded-full bg-gold px-5 py-2.5 text-sm font-bold text-on-gold transition hover:bg-gold-bright"
         >
           Back to listing
         </Link>
