@@ -3,6 +3,8 @@
 import { z } from 'zod'
 import { createSupabaseServerClient } from '@/app/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getConversationMessages } from '@/app/lib/conversations'
+import type { ChatMessage } from '@/app/lib/definitions'
 
 const FindOrCreateSchema = z.object({
   itemId: z.string().uuid(),
@@ -105,3 +107,15 @@ export async function markConversationRead(
 
   return {}
 }
+
+export async function fetchConversationMessages(
+  conversationId: string,
+): Promise<{ messages?: ChatMessage[]; error?: string }> {
+  try {
+    const messages = await getConversationMessages(conversationId)
+    return { messages }
+  } catch (err: any) {
+    return { error: err.message || 'Failed to load messages.' }
+  }
+}
+

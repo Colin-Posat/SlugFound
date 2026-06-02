@@ -6,7 +6,7 @@ import type { Conversation, ChatMessage, MessageRow } from '@/app/lib/definition
 import { createSupabaseBrowserClient } from '@/app/lib/supabase/client'
 import { useUnread } from '@/app/lib/unread-context'
 import { useRealtimeMessages } from '@/app/lib/use-realtime-messages'
-import { markConversationRead } from '@/app/actions/messages'
+import { markConversationRead, fetchConversationMessages } from '@/app/actions/messages'
 import ConversationList from './conversation-list'
 import MessageThread from './message-thread'
 import EmptyThread from './empty-thread'
@@ -111,28 +111,15 @@ export default function MessagesView({
   useEffect(() => {
     if (!clientActiveId || loadedConversations.has(clientActiveId)) return
 
-    const supabase = createSupabaseBrowserClient()
-    supabase
-      .from('messages')
-      .select('*')
-      .eq('conversation_id', clientActiveId)
-      .order('created_at', { ascending: true })
-      .then(({ data, error }) => {
-        if (error) {
-          toast.error('Failed to load messages.')
-          return
-        }
-        const messages: ChatMessage[] = ((data ?? []) as MessageRow[]).map((row) => ({
-          id: row.id,
-          conversationId: row.conversation_id,
-          senderId: row.sender_id,
-          body: row.body ?? '',
-          imageUrl: row.image_url ?? undefined,
-          sentAt: row.created_at,
-        }))
-        setMessagesByConversation((prev) => ({ ...prev, [clientActiveId]: messages }))
-        setLoadedConversations((prev) => new Set(prev).add(clientActiveId))
-      })
+    fetchConversationMessages(clientActiveId).then((res) => {
+      if ('error' in res && res.error) {
+        toast.error(res.error)
+        return
+      }
+      const messages = res.messages || []
+      setMessagesByConversation((prev) => ({ ...prev, [clientActiveId]: messages }))
+      setLoadedConversations((prev) => new Set(prev).add(clientActiveId))
+    })
   }, [clientActiveId, loadedConversations])
 
   // Mark as read when the active conversation changes — does NOT affect ordering.
