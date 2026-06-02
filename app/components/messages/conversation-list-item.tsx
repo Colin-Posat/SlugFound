@@ -1,4 +1,5 @@
-import Link from 'next/link'
+'use client'
+
 import type { Conversation } from '@/app/lib/definitions'
 import { timeAgo } from '@/app/lib/format'
 
@@ -6,17 +7,20 @@ interface ConversationListItemProps {
   conversation: Conversation
   isActive: boolean
   unreadCount: number
+  onSelect: (conversationId: string) => void
 }
 
 export default function ConversationListItem({
   conversation,
   isActive,
   unreadCount,
+  onSelect,
 }: ConversationListItemProps) {
   return (
-    <Link
-      href={`/messages?c=${conversation.id}`}
-      className={`flex min-w-0 items-center gap-3 rounded-xl px-3 py-3 transition-colors ${
+    <button
+      type="button"
+      onClick={() => onSelect(conversation.id)}
+      className={`flex w-full min-w-0 items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors ${
         isActive
           ? 'border-l-2 border-gold bg-gold-soft pl-2.5'
           : 'hover:bg-surface-2'
@@ -66,6 +70,6 @@ export default function ConversationListItem({
           {unreadCount}
         </span>
       )}
-    </Link>
+    </button>
   )
 }

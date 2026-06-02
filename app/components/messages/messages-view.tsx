@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import type { Conversation, ChatMessage, MessageRow } from '@/app/lib/definitions'
 import { createSupabaseBrowserClient } from '@/app/lib/supabase/client'
@@ -45,14 +44,23 @@ function bubbleConversation(
   return [updated, ...list.slice(0, idx), ...list.slice(idx + 1)]
 }
 
+/** Read the `?c=` search param from the current URL. */
+function getActiveIdFromUrl(): string | null {
+  if (typeof window === 'undefined') return null
+  return new URLSearchParams(window.location.search).get('c') || null
+}
+
 export default function MessagesView({
   conversations,
-  activeId,
+  activeId: serverActiveId,
   currentUserId,
   initialMessages,
 }: MessagesViewProps) {
-  const router = useRouter()
   const { unreadCounts, clearUnread, incrementUnread } = useUnread()
+
+  // ── Client-side active conversation ────────────────────────────────────────
+  // Managed entirely in client state so switching is instant (no server round-trip).
+  const [clientActiveId, setClientActiveId] = useState<string | null>(serverActiveId)
 
   // Client-side sorted list — initialised from the server prop sorted by last
   // message time. Re-sorts ONLY when a message is sent or received, never on
@@ -73,19 +81,41 @@ export default function MessagesView({
     () => new Set(Object.keys(initialMessages)),
   )
 
-  const activeConversation = activeId
-    ? (sortedConversations.find((c) => c.id === activeId) ?? null)
+  const activeConversation = clientActiveId
+    ? (sortedConversations.find((c) => c.id === clientActiveId) ?? null)
     : null
 
-  // Fetch messages when switching to a conversation not yet loaded
+  // ── Select a conversation (client-side only) ──────────────────────────────
+  const handleSelectConversation = useCallback((conversationId: string) => {
+    setClientActiveId(conversationId)
+    // Update the URL for bookmarking / sharing without triggering a server navigation.
+    window.history.pushState(null, '', `/messages?c=${conversationId}`)
+  }, [])
+
+  // ── Go back to conversation list (client-side only) ───────────────────────
+  const handleBack = useCallback(() => {
+    setClientActiveId(null)
+    window.history.pushState(null, '', '/messages')
+  }, [])
+
+  // ── Sync with browser back/forward buttons ────────────────────────────────
   useEffect(() => {
-    if (!activeId || loadedConversations.has(activeId)) return
+    function onPopState() {
+      setClientActiveId(getActiveIdFromUrl())
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  // ── Fetch messages when switching to a conversation not yet loaded ────────
+  useEffect(() => {
+    if (!clientActiveId || loadedConversations.has(clientActiveId)) return
 
     const supabase = createSupabaseBrowserClient()
     supabase
       .from('messages')
       .select('*')
-      .eq('conversation_id', activeId)
+      .eq('conversation_id', clientActiveId)
       .order('created_at', { ascending: true })
       .then(({ data, error }) => {
         if (error) {
@@ -100,18 +130,18 @@ export default function MessagesView({
           imageUrl: row.image_url ?? undefined,
           sentAt: row.created_at,
         }))
-        setMessagesByConversation((prev) => ({ ...prev, [activeId]: messages }))
-        setLoadedConversations((prev) => new Set(prev).add(activeId))
+        setMessagesByConversation((prev) => ({ ...prev, [clientActiveId]: messages }))
+        setLoadedConversations((prev) => new Set(prev).add(clientActiveId))
       })
-  }, [activeId, loadedConversations])
+  }, [clientActiveId, loadedConversations])
 
   // Mark as read when the active conversation changes — does NOT affect ordering.
   useEffect(() => {
-    if (activeId) {
-      clearUnread(activeId)
-      markConversationRead(activeId)
+    if (clientActiveId) {
+      clearUnread(clientActiveId)
+      markConversationRead(clientActiveId)
     }
-  }, [activeId, clearUnread])
+  }, [clientActiveId, clearUnread])
 
   const handleRealtimeMessage = useCallback(
     (msg: MessageRow) => {
@@ -138,13 +168,13 @@ export default function MessagesView({
         bubbleConversation(prev, msg.conversation_id, preview, msg.created_at),
       )
 
-      if (msg.conversation_id === activeId) {
+      if (msg.conversation_id === clientActiveId) {
         markConversationRead(msg.conversation_id)
       } else {
         incrementUnread(msg.conversation_id)
       }
     },
-    [activeId, incrementUnread],
+    [clientActiveId, incrementUnread],
   )
 
   useRealtimeMessages({
@@ -189,24 +219,21 @@ export default function MessagesView({
     )
   }
 
-  function handleBack() {
-    router.push('/messages')
-  }
-
-  const messages = activeId ? (messagesByConversation[activeId] ?? []) : []
+  const messages = clientActiveId ? (messagesByConversation[clientActiveId] ?? []) : []
 
   return (
     <div className="flex h-[calc(100dvh-80px)] overflow-hidden md:h-screen">
-      <div className={`${activeId ? 'hidden md:flex' : 'flex'} w-full md:w-auto`}>
+      <div className={`${clientActiveId ? 'hidden md:flex' : 'flex'} w-full md:w-auto`}>
         <ConversationList
           conversations={sortedConversations}
-          activeId={activeId}
+          activeId={clientActiveId}
           unreadCounts={unreadCounts}
+          onSelect={handleSelectConversation}
         />
       </div>
 
       {activeConversation ? (
-        <div className={`${activeId ? 'flex' : 'hidden md:flex'} flex-1 flex-col overflow-hidden`}>
+        <div className={`${clientActiveId ? 'flex' : 'hidden md:flex'} flex-1 flex-col overflow-hidden`}>
           <MessageThread
             conversation={activeConversation}
             messages={messages}

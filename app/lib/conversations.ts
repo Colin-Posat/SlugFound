@@ -30,7 +30,7 @@ export function toConversation(
   currentUserId: string,
   otherProfile: Pick<Profile, 'id' | 'display_name' | 'avatar_url' | 'college'>,
   item: Pick<Item, 'id' | 'title' | 'emoji' | 'type'>,
-  lastMessage: { body: string; created_at: string } | null,
+  lastMessage: { body: string | null; image_url: string | null; created_at: string } | null,
   unreadCount: number,
 ): Conversation {
   const otherUser: MessageUser = {
@@ -48,7 +48,7 @@ export function toConversation(
     itemTitle: item.title,
     itemEmoji: item.emoji ?? '📦',
     itemType: item.type as ItemType,
-    lastMessagePreview: lastMessage?.body ?? '',
+    lastMessagePreview: lastMessage?.body?.trim() || (lastMessage?.image_url ? '📷 Photo' : ''),
     lastMessageAt: lastMessage?.created_at ?? row.created_at,
     unreadCount,
   }
@@ -73,7 +73,7 @@ export async function listConversations(userId: string): Promise<Conversation[]>
        profile_b:profiles!conversations_user_b_fkey(id, display_name, avatar_url, college)`,
     )
     .or(`user_a.eq.${userId},user_b.eq.${userId}`)
-    .order('updated_at', { ascending: false })
+    .order('created_at', { ascending: false })
 
   if (error) {
     console.error('[conversations.listConversations] failed:', error.message)
@@ -91,7 +91,7 @@ export async function listConversations(userId: string): Promise<Conversation[]>
       const [lastMsgResult, unreadResult] = await Promise.all([
         supabase
           .from('messages')
-          .select('body, created_at')
+          .select('body, image_url, created_at')
           .eq('conversation_id', row.id)
           .order('created_at', { ascending: false })
           .limit(1)
@@ -104,14 +104,20 @@ export async function listConversations(userId: string): Promise<Conversation[]>
           .gt('created_at', myLastReadAt),
       ])
 
-      const lastMessage = lastMsgResult.data as { body: string; created_at: string } | null
+      const lastMessage = lastMsgResult.data as { body: string | null; image_url: string | null; created_at: string } | null
       const unreadCount = unreadResult.count ?? 0
 
       return toConversation(row, userId, otherProfile, row.item, lastMessage, unreadCount)
     }),
   )
 
-  return results
+  // Sort by last message time (most recent first). This is done after hydration
+  // because the sort key comes from the messages table, not the conversations table.
+  // Sorting by conversations.updated_at was the previous bug — markConversationRead
+  // updates that column, which displaced conversations on click.
+  return results.sort(
+    (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime(),
+  )
 }
 
 export async function getConversationMessages(conversationId: string): Promise<ChatMessage[]> {

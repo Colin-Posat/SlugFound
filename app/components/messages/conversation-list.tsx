@@ -8,12 +8,14 @@ interface ConversationListProps {
   conversations: readonly Conversation[]
   activeId: string | null
   unreadCounts: Record<string, number>
+  onSelect: (conversationId: string) => void
 }
 
 export default function ConversationList({
   conversations,
   activeId,
   unreadCounts,
+  onSelect,
 }: ConversationListProps) {
   const [search, setSearch] = useState('')
 
@@ -54,6 +56,7 @@ export default function ConversationList({
               conversation={c}
               isActive={c.id === activeId}
               unreadCount={unreadCounts[c.id] ?? 0}
+              onSelect={onSelect}
             />
           ))
         )}
