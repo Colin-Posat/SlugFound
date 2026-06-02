@@ -3,10 +3,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import type { Conversation, ChatMessage, MessageRow } from '@/app/lib/definitions'
-import { createSupabaseBrowserClient } from '@/app/lib/supabase/client'
 import { useUnread } from '@/app/lib/unread-context'
 import { useRealtimeMessages } from '@/app/lib/use-realtime-messages'
-import { markConversationRead, fetchConversationMessages } from '@/app/actions/messages'
+import { markConversationRead, fetchConversationMessages, sendConversationMessage } from '@/app/actions/messages'
 import ConversationList from './conversation-list'
 import MessageThread from './message-thread'
 import EmptyThread from './empty-thread'
@@ -179,13 +178,11 @@ export default function MessagesView({
       ],
     }))
 
-    const supabase = createSupabaseBrowserClient()
-    const { error } = await supabase.from('messages').insert({
-      conversation_id: newMessage.conversationId,
-      sender_id: currentUserId,
-      body: newMessage.body || null,         // empty string → null in DB
-      image_url: newMessage.imageUrl ?? null,
-    })
+    const { error } = await sendConversationMessage(
+      newMessage.conversationId,
+      newMessage.body || null,
+      newMessage.imageUrl ?? null
+    )
 
     if (error) {
       // Rollback optimistic update on failure.

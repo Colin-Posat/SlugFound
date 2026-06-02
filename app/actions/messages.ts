@@ -114,8 +114,36 @@ export async function fetchConversationMessages(
   try {
     const messages = await getConversationMessages(conversationId)
     return { messages }
-  } catch (err: any) {
+} catch (err: any) {
     return { error: err.message || 'Failed to load messages.' }
   }
 }
 
+export async function sendConversationMessage(
+  conversationId: string,
+  body: string | null,
+  imageUrl: string | null,
+): Promise<{ error?: string }> {
+  const supabase = await createSupabaseServerClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  
+  if (!user) {
+    return { error: 'Not signed in.' }
+  }
+
+  const { error } = await supabase.from('messages').insert({
+    conversation_id: conversationId,
+    sender_id: user.id,
+    body,
+    image_url: imageUrl,
+  })
+
+  if (error) {
+    return { error: `Could not send message: ${error.message}` }
+  }
+
+  return {}
+}
