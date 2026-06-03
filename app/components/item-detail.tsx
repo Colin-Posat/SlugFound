@@ -34,6 +34,9 @@ export default function ItemDetail({ item, isOwner }: ItemDetailProps) {
   // Local mirror of status so the badge updates instantly when the user
   // marks resolved/claimed without waiting for a full page revalidation.
   const [status, setStatus] = useState<ItemStatus>(item.status)
+  
+  // State for expanding the item image full-screen
+  const [isImageExpanded, setIsImageExpanded] = useState(false)
 
   // Owner-only transitions allowed from the current status (US 4.3).
   const allowedStatuses = nextStatuses(status)
@@ -77,8 +80,11 @@ export default function ItemDetail({ item, isOwner }: ItemDetailProps) {
         </div>
       )}
 
-      {/* Image / emoji — click image to expand fullscreen */}
-      <div className="mb-6 flex h-72 items-center justify-center overflow-hidden rounded-2xl border border-line bg-surface-2">
+      {/* Image / emoji */}
+      <div 
+        className={`mb-6 flex h-72 items-center justify-center overflow-hidden rounded-2xl border border-line bg-surface-2 ${item.image_url ? 'cursor-pointer hover:opacity-95 transition' : ''}`}
+        onClick={() => item.image_url && setIsImageExpanded(true)}
+      >
         {item.image_url ? (
           <ImageOverlay
             src={item.image_url}
@@ -223,6 +229,28 @@ export default function ItemDetail({ item, isOwner }: ItemDetailProps) {
           </button>
         )}
       </div>
+
+      {/* Full-screen image overlay */}
+      {isImageExpanded && item.image_url && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
+          onClick={() => setIsImageExpanded(false)}
+        >
+          <button 
+            className="absolute top-6 right-6 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+            onClick={() => setIsImageExpanded(false)}
+          >
+            <span className="sr-only">Close</span>
+            ✕
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img 
+            src={item.image_url} 
+            alt={item.title} 
+            className="max-h-[90vh] max-w-[100vw] rounded-lg object-contain md:max-w-[90vw]"
+          />
+        </div>
+      )}
     </div>
   )
 }

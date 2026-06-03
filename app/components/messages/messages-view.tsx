@@ -3,10 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import type { Conversation, ChatMessage, MessageRow } from '@/app/lib/definitions'
-import { createSupabaseBrowserClient } from '@/app/lib/supabase/client'
 import { useUnread } from '@/app/lib/unread-context'
 import { useRealtimeMessages } from '@/app/lib/use-realtime-messages'
-import { markConversationRead } from '@/app/actions/messages'
+import { markConversationRead, fetchConversationMessages, sendConversationMessage } from '@/app/actions/messages'
 import ConversationList from './conversation-list'
 import MessageThread from './message-thread'
 import EmptyThread from './empty-thread'
@@ -114,41 +113,16 @@ export default function MessagesView({
     loadedConvsRef.current.add(clientActiveId)
     setIsThreadLoading(true)
 
-    const controller = new AbortController()
-    const activeId = clientActiveId // capture for async callback
-
-    supabaseRef.current
-      .from('messages')
-      .select('*')
-      .eq('conversation_id', activeId)
-      .order('created_at', { ascending: true })
-      .abortSignal(controller.signal)
-      .then(({ data, error }) => {
-        setIsThreadLoading(false)
-        if (error) {
-          // Remove from ref so the user can retry by navigating away and back.
-          loadedConvsRef.current.delete(activeId)
-          toast.error('Failed to load messages.')
-          return
-        }
-        const messages: ChatMessage[] = ((data ?? []) as MessageRow[]).map((row) => ({
-          id: row.id,
-          conversationId: row.conversation_id,
-          senderId: row.sender_id,
-          body: row.body ?? '',
-          imageUrl: row.image_url ?? undefined,
-          sentAt: row.created_at,
-        }))
-        setMessagesByConversation((prev) => ({ ...prev, [activeId]: messages }))
-      })
-
-    return () => {
-      controller.abort()
-      setIsThreadLoading(false)
-      // Remove from ref so the aborted conversation is re-fetched if revisited.
-      loadedConvsRef.current.delete(activeId)
-    }
-  }, [clientActiveId])
+    fetchConversationMessages(clientActiveId).then((res) => {
+      if ('error' in res && res.error) {
+        toast.error(res.error)
+        return
+      }
+      const messages = res.messages || []
+      setMessagesByConversation((prev) => ({ ...prev, [clientActiveId]: messages }))
+      setLoadedConversations((prev) => new Set(prev).add(clientActiveId))
+    })
+  }, [clientActiveId, loadedConversations])
 
   // Mark as read when the active conversation changes — does NOT affect ordering.
   useEffect(() => {
@@ -206,12 +180,11 @@ export default function MessagesView({
       ],
     }))
 
-    const { error } = await supabaseRef.current.from('messages').insert({
-      conversation_id: newMessage.conversationId,
-      sender_id: currentUserId,
-      body: newMessage.body || null,         // empty string → null in DB
-      image_url: newMessage.imageUrl ?? null,
-    })
+    const { error } = await sendConversationMessage(
+      newMessage.conversationId,
+      newMessage.body || null,
+      newMessage.imageUrl ?? null
+    )
 
     if (error) {
       // Rollback optimistic update on failure.
