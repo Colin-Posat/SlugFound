@@ -24,6 +24,7 @@ export default function MessageComposer({
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const supabaseRef = useRef(createSupabaseBrowserClient())
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null
@@ -65,7 +66,7 @@ export default function MessageComposer({
       let storageUrl: string | undefined
 
       if (imageFile) {
-        const supabase = createSupabaseBrowserClient()
+        const supabase = supabaseRef.current
         const ext = imageFile.name.split('.').pop() ?? 'bin'
         const path = `${currentUserId}/${crypto.randomUUID()}.${ext}`
 

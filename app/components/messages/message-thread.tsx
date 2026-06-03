@@ -11,6 +11,7 @@ interface MessageThreadProps {
   currentUserId: string
   onSend: (message: ChatMessage) => void
   onBack: () => void
+  isLoading?: boolean
 }
 
 export default function MessageThread({
@@ -19,6 +20,7 @@ export default function MessageThread({
   currentUserId,
   onSend,
   onBack,
+  isLoading = false,
 }: MessageThreadProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const isLost = conversation.itemType === 'lost'
@@ -76,6 +78,11 @@ export default function MessageThread({
 
       {/* Messages scroll area */}
       <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+        {isLoading && messages.length === 0 && (
+          <div className="flex flex-1 items-center justify-center py-12">
+            <span className="h-6 w-6 animate-spin rounded-full border-2 border-gold border-t-transparent" />
+          </div>
+        )}
         {messages.map((message) => (
           <MessageBubble
             key={message.id}

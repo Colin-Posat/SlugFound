@@ -20,6 +20,7 @@ import { nextStatuses } from '@/app/lib/item-status'
 import type { Item, ItemStatus } from '@/app/lib/definitions'
 import LocationMapPicker from '@/app/components/location-map-picker-dynamic'
 import ReportMenu from '@/app/components/report-menu'
+import ImageOverlay from '@/app/components/ui/image-overlay'
 
 interface ItemDetailProps {
   item: Item
@@ -76,14 +77,20 @@ export default function ItemDetail({ item, isOwner }: ItemDetailProps) {
         </div>
       )}
 
-      {/* Image / emoji */}
+      {/* Image / emoji — click image to expand fullscreen */}
       <div className="mb-6 flex h-72 items-center justify-center overflow-hidden rounded-2xl border border-line bg-surface-2">
         {item.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <ImageOverlay
             src={item.image_url}
             alt={item.title}
-            className="h-full w-full object-cover"
+            trigger={
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={item.image_url}
+                alt={item.title}
+                className="h-full w-full cursor-pointer object-cover"
+              />
+            }
           />
         ) : (
           <span className="text-9xl">{item.emoji ?? '📦'}</span>

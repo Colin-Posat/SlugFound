@@ -1,5 +1,8 @@
+'use client'
+
 import type { ChatMessage } from '@/app/lib/definitions'
 import { formatMessageTime } from '@/app/lib/format'
+import ImageOverlay from '@/app/components/ui/image-overlay'
 
 interface MessageBubbleProps {
   message: ChatMessage
@@ -20,21 +23,20 @@ export default function MessageBubble({ message, isOwn }: MessageBubbleProps) {
               : 'rounded-bl-sm border border-line bg-surface text-ink'
           }`}
         >
-          {/* Image attachment */}
+          {/* Image attachment — click to expand fullscreen */}
           {hasImage && (
-            <a
-              href={message.imageUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="View full image"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={message.imageUrl}
-                alt="Attached photo"
-                className="block max-h-60 w-full object-cover"
-              />
-            </a>
+            <ImageOverlay
+              src={message.imageUrl!}
+              alt="Attached photo"
+              trigger={
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={message.imageUrl}
+                  alt="Attached photo"
+                  className="block max-h-60 w-full object-cover"
+                />
+              }
+            />
           )}
 
           {/* Text body */}
