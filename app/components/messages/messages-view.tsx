@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import type { Conversation, ChatMessage, MessageRow } from '@/app/lib/definitions'
 import { useUnread } from '@/app/lib/unread-context'
@@ -57,14 +57,13 @@ export default function MessagesView({
 }: MessagesViewProps) {
   const { unreadCounts, clearUnread, incrementUnread } = useUnread()
 
+  // Stable Supabase client for the lifetime of this component — avoids
+  // creating a new client (and potentially stale auth state) on every operation.
+  const supabaseRef = useRef(createSupabaseBrowserClient())
+
   // ── Client-side active conversation ────────────────────────────────────────
-  // Managed entirely in client state so switching is instant (no server round-trip).
   const [clientActiveId, setClientActiveId] = useState<string | null>(serverActiveId)
 
-  // Client-side sorted list — initialised from the server prop sorted by last
-  // message time. Re-sorts ONLY when a message is sent or received, never on
-  // click/read (which was the previous bug: markConversationRead updated
-  // conversations.updated_at → triggered a re-sort that displaced conversations).
   const [sortedConversations, setSortedConversations] = useState<Conversation[]>(() =>
     [...conversations].sort(
       (a, b) =>
@@ -76,9 +75,10 @@ export default function MessagesView({
     Record<string, readonly ChatMessage[]>
   >(() => ({ ...initialMessages }))
 
-  const [loadedConversations, setLoadedConversations] = useState<Set<string>>(
-    () => new Set(Object.keys(initialMessages)),
-  )
+  // Ref (not state) so changes don't trigger extra effect reruns.
+  const loadedConvsRef = useRef<Set<string>>(new Set(Object.keys(initialMessages)))
+
+  const [isThreadLoading, setIsThreadLoading] = useState(false)
 
   const activeConversation = clientActiveId
     ? (sortedConversations.find((c) => c.id === clientActiveId) ?? null)
@@ -87,7 +87,6 @@ export default function MessagesView({
   // ── Select a conversation (client-side only) ──────────────────────────────
   const handleSelectConversation = useCallback((conversationId: string) => {
     setClientActiveId(conversationId)
-    // Update the URL for bookmarking / sharing without triggering a server navigation.
     window.history.pushState(null, '', `/messages?c=${conversationId}`)
   }, [])
 
@@ -108,7 +107,11 @@ export default function MessagesView({
 
   // ── Fetch messages when switching to a conversation not yet loaded ────────
   useEffect(() => {
-    if (!clientActiveId || loadedConversations.has(clientActiveId)) return
+    if (!clientActiveId || loadedConvsRef.current.has(clientActiveId)) return
+
+    // Mark immediately to prevent duplicate fetches on rapid navigation.
+    loadedConvsRef.current.add(clientActiveId)
+    setIsThreadLoading(true)
 
     fetchConversationMessages(clientActiveId).then((res) => {
       if ('error' in res && res.error) {
@@ -148,7 +151,6 @@ export default function MessagesView({
         ],
       }))
 
-      // Bubble the conversation to the top when a message arrives.
       const preview = msg.body?.trim() || '📷 Photo'
       setSortedConversations((prev) =>
         bubbleConversation(prev, msg.conversation_id, preview, msg.created_at),
@@ -196,7 +198,6 @@ export default function MessagesView({
       return
     }
 
-    // Bubble the conversation to top on successful send.
     const preview = newMessage.body.trim() || '📷 Photo'
     setSortedConversations((prev) =>
       bubbleConversation(prev, newMessage.conversationId, preview, newMessage.sentAt),
@@ -224,6 +225,7 @@ export default function MessagesView({
             currentUserId={currentUserId}
             onSend={handleSend}
             onBack={handleBack}
+            isLoading={isThreadLoading}
           />
         </div>
       ) : (

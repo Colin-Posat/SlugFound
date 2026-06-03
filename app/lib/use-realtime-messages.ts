@@ -15,16 +15,17 @@ export function useRealtimeMessages({
   onNewMessage,
 }: UseRealtimeMessagesOptions) {
   const callbackRef = useRef(onNewMessage)
+  const supabaseRef = useRef(createSupabaseBrowserClient())
 
   useEffect(() => {
     callbackRef.current = onNewMessage
   }, [onNewMessage])
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient()
+    const supabase = supabaseRef.current
 
     const channel: RealtimeChannel = supabase
-      .channel('messages-realtime')
+      .channel(`messages-realtime-${currentUserId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
@@ -35,7 +36,14 @@ export function useRealtimeMessages({
           }
         },
       )
-      .subscribe()
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('[realtime] channel error:', err?.message)
+        }
+        if (status === 'TIMED_OUT') {
+          console.warn('[realtime] subscription timed out for user', currentUserId)
+        }
+      })
 
     return () => {
       supabase.removeChannel(channel)

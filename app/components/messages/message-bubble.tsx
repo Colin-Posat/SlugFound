@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { ChatMessage } from '@/app/lib/definitions'
 import { formatMessageTime } from '@/app/lib/format'
+import ImageOverlay from '@/app/components/ui/image-overlay'
 
 interface MessageBubbleProps {
   message: ChatMessage
@@ -25,7 +26,7 @@ export default function MessageBubble({ message, isOwn }: MessageBubbleProps) {
               : 'rounded-bl-sm border border-line bg-surface text-ink'
           }`}
         >
-          {/* Image attachment */}
+          {/* Image attachment — click to expand fullscreen */}
           {hasImage && (
             <button
               type="button"
