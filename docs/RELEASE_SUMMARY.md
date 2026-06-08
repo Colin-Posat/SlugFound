@@ -1,8 +1,8 @@
 # Release Summary
 
 **Product:** SlugFound — a lost-and-found platform for UC Santa Cruz students
-**Team:** Team SlugFound · CMPS 115 – Software Methodology
-**Members:** Bardia Nasab (Scrum Master), Colin Posat (Developer, UI/UX Lead), Sam Madinya (Developer), Aidan Nguyen (Developer)
+**Team:** Team SlugFound · CSE 115A – Intro to Software Engineering
+**Members:** Bardia Nasab (Product Owner), Colin Posat (Developer, UI/UX Lead), Sam Madinya (Developer), Aidan Nguyen (Developer)
 **Release:** 1.0 (first release)
 **Date:** June 2, 2026
 
